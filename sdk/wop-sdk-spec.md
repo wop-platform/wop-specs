@@ -4,6 +4,7 @@
 > 日期：2026-08-28
 > 裁决记录：Q1 传输层=协议核心+可插拔 HTTP 适配层（用户裁决）；Q7 TS/PHP 首版仅 RSA 套件、国密列路线图（用户裁决）；Q2–Q6 按草案默认立场通过（已列明无异议）
 > 适用仓库：github.com/wop-platform/wop-{lang}-sdk
+> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——本文件为网关侧工作副本，修订以真源为准并双向同步
 
 ---
 
@@ -79,7 +80,7 @@ WopClient / WopConfig
 ## 4. 仓库与工程约定
 
 - 组织 `wop-platform`，仓库 `wop-<lang>-sdk`，主分支 `main`，MIT License，版本 0.1.0
-- 目录：`src/`（或语言习惯）、`tests/`、`vectors/crypto-vectors.json`（fixture 副本，禁止手改；真源：[crypto/crypto-vectors.json](../crypto/crypto-vectors.json)）
+- 目录：`src/`（或语言习惯）、`tests/`、`vectors/crypto-vectors.json`（fixture 副本，禁止手改；公开真源：[wop-specs · crypto/crypto-vectors.json](https://github.com/wop-platform/wop-specs/blob/main/crypto/crypto-vectors.json)）
 - `README.md`（**中文默认**）+ `README.en.md`（英文），内容含：快速开始、密钥准备、L0/L2 示例、向量自测、错误处理与模糊化说明
 - CI（GitHub Actions）：测试 + 覆盖率门禁（≥98%）+ 向量合规必须全绿
 - 提交规范沿用 conventional commits（中文 body 允许）
@@ -99,3 +100,47 @@ WopClient / WopConfig
 ## 6. 决策记录
 
 Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.0-ratified。
+
+## 附录 D：跨语言实现勘误与补充纪律（2026-08-29 增补，v1.0-ratified 后勘误）
+
+> 背景：wop-dotnet-sdk 交付审查发现 base64url 非规范尾随位在 .NET/JDK/CPython/PHP 标准库中均为宽容实现，
+> 已升格为 spec 层测试向量（crypto-vectors.json formatRules 8→12，gateway commit 18836a2），
+> 并完成六仓横审与修复。本附录条款与正文同级生效。
+
+### D1. base64url 尾随位严格性（F6/F7 细化）
+
+- 未填充 base64url 的**非规范尾随位必须拒绝**（语义锚：Go `base64.RawURLEncoding.Strict()`，RFC 4648 §3.5）：
+  - `len % 4 == 2`（1 字节数据）：末字符 index 低 **4** 位须为零；
+  - `len % 4 == 3`（2 字节数据）：末字符 index 低 **2** 位须为零；
+  - `len % 4 == 1` 一律拒绝。
+- 字符 index：A-Z=0-25、a-z=26-51、0-9=52-61、`-`=62、`_`=63。
+- 黄金向量：`aE`/`TWF` → reject；`AA` → accept（0x00）；`TWE` → accept（`"Ma"`）。
+- 实现注意：.NET `Convert.FromBase64String`、JDK `Base64.getUrlDecoder()`、CPython `base64.urlsafe_b64decode`、
+  PHP `base64_decode($s, true)` 均不校验尾随位，**必须在解码前显式校验**。
+
+### D2. 向量 fixture 同步机制（A1/A2 执行细则）
+
+- 各仓 fixture 是真源（`gtsp-wop-gateway/docs/crypto-vectors.json`）的**字节副本**；CI 必须含"真源 vs 本地副本
+  字节比对"步骤，**不一致即 fail**（禁止降级为 warning）。
+- formatRules 消费**三件套**（缺一即视为未消费）：
+  1. 循环全量消费（禁止按 id 点名）；
+  2. 未知 id 哨兵（出现未预期条目即失败）；
+  3. 条数哨兵（`assertEquals(<真源当前条数>)`，真源条数变更时各仓哨兵必须同步更新）。
+- accept 向量必须有正向断言（解码字节级），禁止只测 reject 路径。
+
+### D3. 信封 JSON 解析（F5/L2 细化）
+
+- `{"encrypted":...}` 提取必须容忍未知字段，且解析器必须**字符串感知**（字符串内容中的
+  `}` `]` `,` 不得参与深度/边界判定）。
+- 手写扫描器必须支持 RFC 8259 完整转义集（含 `\uXXXX`；键名转义与其解码字符语义等价）；
+  推荐直接使用语言标准 JSON 解析器。
+
+### D4. 传输层限额（D5 执行细则）
+
+- 响应体上限 11MB（`11 << 20` 字节）级，必须在**读取过程中生效**（流式累计、超限即断流），
+  禁止整体缓冲后才检查、禁止依赖运行时默认整体缓冲架空自定义限额。
+
+### D5. 测试构造纪律
+
+- 入向校验测试的"平台响应"构造**不得复用被测 SDK 的出向代码**（防镜像偏差：
+  出向/入向共用同一实现时，协议理解错误双向对称而测试全绿——见 wop-php-sdk L2 裸密文事故）。
