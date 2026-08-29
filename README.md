@@ -45,3 +45,12 @@
 ## 📄 License
 
 [MIT](LICENSE)
+
+## 规格治理（2026-08-29 起）
+
+1. **单一来源**：`sdk/wop-sdk-spec.md`、`crypto/crypto-strategy-spec.md`、`crypto/crypto-vectors.json`
+   以本仓（wop-specs）为唯一维护版；各实现仓（网关 / 六仓 SDK）内的同名文件是同步副本，
+   副本出现分歧时以本仓为准。
+2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 的 commit **必须通过 PR 合并进本仓后**，
+   各实现仓才能做对应的代码/测试变更（先合 PR、后改码）。
+3. **副本同步**：各仓 CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）。
