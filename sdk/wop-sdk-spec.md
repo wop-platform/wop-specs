@@ -69,11 +69,12 @@ WopClient / WopConfig
 | Go | wop-go-sdk | crypto/rsa、crypto/cipher + emmansun/gmsm | go test -covermode=atomic + 强制分支清单 |
 | TypeScript | wop-typescript-sdk | WebCrypto（Node ≥18 / 浏览器）+ 纯 TS SM2/SM3/SM4-GCM | vitest + coverage-v8（branch） |
 | Python | wop-python-sdk | cryptography（RSA/AES）+ gmssl（SM） | pytest + coverage.py（branch） |
-| PHP | wop-php-sdk | phpseclib≥3（RSA/OAEP）+ 纯 PHP SM2/SM3/SM4-GCM | PHPUnit + pcov/xdebug（branch） |
+| PHP | wop-php-sdk | phpseclib≥3（RSA/OAEP）+ 纯 PHP SM2/SM3/SM4-GCM | PHPUnit + xdebug `--path-coverage`（branch，唯一驱动） |
 | .NET | wop-dotnet-sdk | BouncyCastle.Net（全量，含 SM） | xUnit + coverlet（branch） |
 
 - TS/PHP 的纯实现 SM 系算法：以黄金向量为唯一正确性锚（gateway spec D11：官方 SDK 即 SM 生态答案）
 - Go 分支覆盖：语句覆盖 ≥98% + 显式分支矩阵测试（Go 原生不产分支计数，spec 验收按语句+负向量清单）
+- PHP 分支覆盖（wop-php-sdk 实证钉死，2026-08-29）：pcov 无分支数据、phpdbg 驱动已被 PHPUnit 10+ 移除，均为死路——行+分支双门禁唯一驱动是 xdebug path coverage（本地 `XDEBUG_MODE=coverage php -d memory_limit=2G vendor/bin/phpunit --path-coverage …`）；CI 用 shivammathur/setup-php 的 `coverage: xdebug` 输入安装，禁止 `pecl install xdebug || true` 吞错（runner php_dir 不可写必失败，CI run 33196709945 教训）；分支门禁解析 `--coverage-php` 快照（XML 报告只有行数据）；PHP ≥8.5 下命名空间内裸全局函数调用会产生 frameless-call 双路径、Xdebug 将 NS 慢路径块记为未覆盖分支，src 全局函数调用一律 `\` 前缀
 
 ## 4. 仓库与工程约定
 
