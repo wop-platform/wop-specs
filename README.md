@@ -7,7 +7,7 @@
 | 文档 | 版本 | 状态 | 说明 |
 |------|------|------|------|
 | [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.3-reviewed | 评审冻结（D1–D13） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
-| [sdk/wop-sdk-spec.md](sdk/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 六语言官方 SDK 统一规格：功能面 F1–F9、概念 API、每语言密码依赖白名单、验收标准 A1–A7 |
+| [sdk/wop-sdk-spec.md](sdk/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F9、概念 API、每语言密码依赖白名单、验收标准 A1–A7 |
 | [crypto/crypto-vectors.json](crypto/crypto-vectors.json) | 2026-08-28 | 稳定 | 黄金测试向量（TEST-ONLY 密钥）：跨语言**字节级**断言基准，防实现漂移的验收载体（D9） |
 
 **阅读顺序**：加密协议 spec（协议真源）→ SDK 规格（协议的客户端封装契约）→ 黄金向量（正确性锚）。三份文档版本互相引用，升级须同步。
