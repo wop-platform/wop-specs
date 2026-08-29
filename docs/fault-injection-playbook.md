@@ -25,9 +25,9 @@
 | P1 | 信封密文单字符损伤 | wire `{"encrypted":"..."}` 内翻转 1 个 base64url 字符（保长度/字母表合法），重算 digest+签名 | **DECRYPT_FAILED（模糊）** | 文案恒定无细节 |
 | P2 | 传输截断 | 去掉 wire 最后 1 字节（砍掉 `}`），重算 digest+签名 | **INVALID_ENCRYPTED_BODY（明确）** | 与 P1 构成分界对照 |
 | P3 | DEK 载荷 key 段畸形 | 解包合法、alg 正确，但 key 长度错（如 AES 31B） | **DECRYPT_FAILED（模糊）** | bulk 解密抛错归模糊 |
-| P4 | 响应声明跨族套件 | 头声明 `WOP-SM2-SM3`，签名值/密钥实为 RSA | **SIGNATURE_FAILED（模糊）** | 不泄露"密钥族不符"细节 |
+| P4 | 响应声明跨族套件 | 头声明 `WOP-SM2-SM3`，签名值/密钥实为 RSA | **套件一致性明确拒绝（协议类）** | 与商户配置的套件比对是公开结构知识（interop n11 裁决）；密钥族细节仍不泄露 |
 | P5 | 跨端点签名重放 | 签名覆盖 `/gateway/pay`，用 `/gateway/refund` 校验 | **SIGNATURE_FAILED** | 原路径同体校验仍通过（自证非构造错误） |
-| P6 | 签名段 URL 编码污染 | 签名尾追加 `%3D`（模拟中间层 urlencode） | **SIGNATURE_FAILED（模糊）** | 严格 base64url 拒 `=` |
+| P6 | 签名段 URL 编码污染 | 签名尾追加 `%3D`（模拟中间层 urlencode） | **协议类明确拒绝** | b64url 字符集/定长是公开结构知识，先于验签拒收（interop n06 裁决）；java 初版曾归模糊，已拉齐 |
 | P7 | 入向头名大小写混合 | 非官方栈送 `X-WOP-SIGN` 等混合形态 | **ok（通过）** | 核心层大小写不敏感兜底 |
 
 ## 2. 网络层注入矩阵（适配器，每语言必做）

@@ -25,9 +25,10 @@ canonicalRequest 拼装、x-wop-sign 结构、signedHeaders 组装、L2 信封�
   - `x-wop-encrypt.dekValue`：`dek=` 之后的包装密文（SM2 k 同理）
   - wire body、digest 头**仍在比对范围**（CEK/IV 由随机流前段确定）
 
-**随机流消费顺序合同**：注入的 `randomHex` 按序消费——`[16B nonce 池（已由
-nonce 字段跳过时可忽略）][CEK][12B IV][k…（各仓实现自定义）]`。消费仓的确定性
-钩子（`WithRandom` 等价物）必须按此顺序取前段，否则 SM2 L2 的 wire/digest 比对失败。
+**随机流消费顺序合同**：`randomHex` 的消费顺序为
+`[16B nonce 池（仅当 nonce 未注入时才消费）][CEK][12B IV][k…（各仓实现自定义）]`。
+**build 样本的 nonce 均已注入**，故流偏移 0 直接是 CEK（`[0:len(CEK)]→CEK`、
+随后 12B→IV、RSA 再取 32B OAEP seed）。字面读成"先跳 16B 再取 CEK"会导致比对失败。
 
 ### kind = verify-positive / verify-negative（7 + 16 条）
 
@@ -44,7 +45,7 @@ nonce 字段跳过时可忽略）][CEK][12B IV][k…（各仓实现自定义）]
 |---|---|---|
 | `verify-failed` | 验签类，**模糊**（文案恒定无细节） | n01? 否——n16 重放、n02 之前的签名层故障 |
 | `decrypt-failed` | 解密类，**模糊** | n01 密文损伤、n05 C1C2C3、n13 DEK 键长 |
-| `digest-mismatch` | 完整性类，明确 | n02、n09 |
+| `digest-mismatch` | 完整性类，明确 | n02、n09（**n09"有 body 缺 digest 头"亦归此类**——D2 把"缺失"与"不匹配"同视为完整性破坏，非结构格式问题） |
 | `alg-mismatch` | 一致性类，明确（D8） | n04 |
 | `protocol` | 解析/协议结构类，明确 | n03/n06/n07/n08/n10/n11/n12/n14/n15 |
 
