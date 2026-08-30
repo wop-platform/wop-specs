@@ -1,4 +1,5 @@
 # WOP Specs
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/wop-platform/wop-specs?utm_source=oss&utm_medium=github&utm_campaign=wop-platform%2Fwop-specs&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 万联易达开放平台（WOP）**对外公开规格文档集**：协议契约、SDK 统一规格与跨语言测试向量的唯一真源。商户与第三方开发者据此集成。
 
