@@ -532,7 +532,7 @@ sequenceDiagram
 | 报文加密 | SM4-GCM/NoPadding | key 16B / IV 12B / tag 128b，密文 = ciphertext‖tag |
 | 密钥加密 | SM2 | C1C3C2 裸拼接（C1 = 未压缩点 65B），Base64URL 无填充 |
 | 摘要 | SM3 | `x-wop-content-digest: sm3 <小写hex>` |
-| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **契约空白（D14 待钉）**：实现侧默认值不一致（BC / emmansun-gmsm / gmssl = `1234567812345678`，sm-crypto-v2 = 空串），跨语言签名不匹配风险；网关参考实现隐式默认 `1234567812345678`（Sm2SignatureStrategy.java 注释）；黄金向量在 `inputs.sm2UserId` 中显式提供 `1234567812345678`（crypto-vectors.json），但该向量本身不定义或证明 SDK/API 默认值——默认值需另行钉死，或要求调用方显式传入 userId |
+| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **契约空白（D14 待钉）**：实现侧默认值不一致（BC / emmansun-gmsm / gmssl = `1234567812345678`，sm-crypto-v2 = 空串），跨语言签名不匹配风险；网关参考实现隐式默认 `1234567812345678`（实现依据另见网关侧非公开文档）；黄金向量在 `inputs.sm2UserId` 中显式提供 `1234567812345678`（crypto-vectors.json），但该向量本身不定义或证明 SDK/API 默认值——默认值需另行钉死，或要求调用方显式传入 userId |
 
 ---
 
