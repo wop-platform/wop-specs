@@ -1,8 +1,8 @@
 # 加密算法策略化需求 Spec
 
-> 版本：v0.3-reviewed
-> 日期：2026-08-28
-> 状态：已评审（决策 D1–D13 冻结，见附录 C）
+> 版本：v0.4-draft
+> 日期：2026-08-31
+> 状态：已评审（决策 D1–D13 冻结；D14 待钉，见附录 C）
 > 范围：仅描述**目标需求**，不涉及现有实现（绿地需求文档，D1）
 > 配套测试向量：[crypto-vectors.json](crypto-vectors.json)（TEST-ONLY 密钥，跨语言字节级断言基准，附录 B.2 / D9 的载体）
 
@@ -532,6 +532,7 @@ sequenceDiagram
 | 报文加密 | SM4-GCM/NoPadding | key 16B / IV 12B / tag 128b，密文 = ciphertext‖tag |
 | 密钥加密 | SM2 | C1C3C2 裸拼接（C1 = 未压缩点 65B），Base64URL 无填充 |
 | 摘要 | SM3 | `x-wop-content-digest: sm3 <小写hex>` |
+| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **契约空白（D14 待钉）**：实现侧默认值不一致（BC / emmansun-gmsm / gmssl = `1234567812345678`，sm-crypto-v2 = 空串），跨语言签名不匹配风险；网关参考实现隐式默认 `1234567812345678`（实现依据另见网关侧非公开文档）；黄金向量在 `inputs.sm2UserId` 中显式提供 `1234567812345678`（crypto-vectors.json），但该向量本身不定义或证明 SDK/API 默认值——默认值需另行钉死，或要求调用方显式传入 userId |
 
 ---
 
@@ -558,7 +559,7 @@ sequenceDiagram
 
 ---
 
-## 附录 C：评审决策记录（D1–D13）
+## 附录 C：评审决策记录（D1–D14，其中 D14 待钉）
 
 | # | 决议 |
 |---|------|
@@ -575,3 +576,4 @@ sequenceDiagram
 | D11 | SM4-GCM 维持；JS/PHP/.NET 由官方 SDK 承接；新增 E5 |
 | D12 | 公钥分发编码（SPKI Base64 / SM2 未压缩点）移入协议章节 3.4 |
 | D13 | R5 改写：映射集中注册于代码，扩展需发版，无运行时配置入口 |
+| D14 | **userId 契约待钉**：SM3withSM2 的 ZA 计算需 userId，spec 正文未定义 → 各库默认值不一致（BC/gmsm/gmssl=`1234567812345678`，sm-crypto-v2=空串）导致跨语言签名漂移。网关参考实现隐式默认 `1234567812345678`；黄金向量在 `inputs.sm2UserId` 显式提供同一值，但向量本身不构成默认值证明。待评审：显式钉死默认 userId 并纳入黄金向量声明 | 待钉 |
