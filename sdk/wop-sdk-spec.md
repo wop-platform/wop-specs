@@ -62,6 +62,42 @@ WopClient / WopConfig
 - 密钥入参：字符串（PEM 或 Base64 单行），SDK 内部解析；RSA=SPKI/PKCS8、SM2=04‖X‖Y/d 标量（D12）
 - 确定性要求：同输入同输出（除 CSPRNG IV/nonce）；`buildRequest` 可重放生成（幂等测试断言）
 
+### 2.1 出向必传 header 契约（必传集合与入签义务，2026-08-31 增补）
+
+`buildRequest` 产出的 `RequestDraft.headers` 必须包含下表集合，且**全部参与签名**
+（canonicalRequest 的 signedHeaders 集合；I1「digest 必入签」为本表子集不变式，此处钉死全集）。
+缺失任一必传项视为非法输入，构造即拒（`configuration` 类，见 §2.2），禁止静默补默认值：
+
+| header | 必传条件 | 参与签名 | 值来源 |
+|--------|----------|----------|--------|
+| `x-wop-appkey` | 恒必传 | ✅ | `config.appKey` 同值序列化；SM2-SM3 套件下 ZA 计算的 userId 即此值（D14） |
+| `x-wop-content-digest` | 有 body 必传；无 body（GET）缺席——不定义空摘要中间态（D2） | ✅ | wire body 原始字节摘要，`alg 小写hex`（F4） |
+| `x-wop-encrypt` | 仅 L2 加密请求必传；L0 缺席 | ✅ | DEK 载荷 `L2;dek=alg$key$iv`（F5） |
+| `x-wop-nonce` | 恒必传 | ✅ | CSPRNG（F9） |
+| `x-wop-timestamp` | 恒必传 | ✅ | 毫秒时间戳（F9） |
+
+- `x-wop-sign`（securityReq 声明与签名的载体）不参与自身签名。
+- SM2-SM3 下 ZA 的 userId 取**出向请求实际携带的 `x-wop-appkey` 值**（= `config.appKey`
+  的同一序列化结果），闭环 D14：签名身份与请求身份恒同源，禁止读库默认值。
+
+### 2.2 错误契约（WopError，2026-08-31 增补）
+
+出向可观测错误（构造器 / `buildRequest` 同步 throw、async reject）统一形状
+`WopError{category, message}`；`category` 为闭集（小写 ASCII，跨语言恒定），映射与 I7 文案纪律：
+
+| category | 触发类 | I7 文案 |
+|----------|--------|---------|
+| `configuration` | 配置错误：appKey / 密钥材料缺失或非法、securityReq 非法或跨族（F1） | 明确 |
+| `parse` | 协议解析错误：header / 信封 / 线上编码格式（D1/D3） | 明确 |
+| `unsupported` | 能力不支持：合法套件但本 SDK 未实现（如 TS/PHP 首版 SM，§1.2） | 明确 |
+| `integrity` | 完整性校验：digest 不匹配 | 明确 |
+| `consistency` | 一致性校验：dek alg 与套件族不符（I3） | 明确 |
+| `signature` | 验签失败 | **模糊**：固定文案「签名验证失败」 |
+| `decrypt` | 解密失败（DEK 解包 / GCM tag 两路径同文案，防 oracle 区分） | **模糊**：固定文案「解密失败」 |
+
+- 入向校验（`verifyResponse` / `verifyCallback`）不抛 WopError，吞并为
+  `VerifyResult{ok, reason}`（I7）；该路径 category 不可观测（D6 禁伪断言的依据）。
+
 ## 3. 各语言实现约束
 
 | 语言 | 仓库名 | 密码依赖（唯一指定路径，E5） | 测试/覆盖率工具 |
@@ -144,6 +180,57 @@ Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.
 
 - 入向校验测试的"平台响应"构造**不得复用被测 SDK 的出向代码**（防镜像偏差：
   出向/入向共用同一实现时，协议理解错误双向对称而测试全绿——见 wop-php-sdk L2 裸密文事故）。
+
+### D6. 错误断言纪律（A6/I7 执行细则，2026-08-29 wop-typescript-sdk 变异闭环实证后增补）
+
+> 实证背景：SDK 测试四维 100% 且 146 测试全绿时，自研变异运行（263 变异体、12 类算子）
+> 首轮击杀率仅 76.01%——最大漏洞是错误文案断言依赖框架子串语义（如 vitest/Jest 的
+> `toThrowError(string)` 为 **contains** 匹配），对「错误消息回归」与字符串追加类变异体
+> 双重失明；补全等断言后击杀率升至 95.06%。覆盖率门禁测不到这一层。
+
+- **协议类错误**（parse / unsupported / integrity / consistency，即 I7 语义明确类）：
+  测试必须断言错误消息**全等**（`expect(e.message).toBe(exact)` 或等价机制），
+  禁止以框架 `toThrowError(string)` / `toContain` / 无 `$` 锚正则作为唯一文案断言
+  ——子串语义对文案尾部漂移天然放行。
+- **密钥参与类错误**（signature / decrypt，I7 模糊类）：只断言**固定模糊文案本身**
+  （如「签名验证失败」「解密失败」），且断言不匹配实现细节（padding/tag/密钥不符等）；
+  两条失败路径（DEK 解包失败与 GCM tag 失败）必须同文案，防 oracle 区分。
+- **category 断言**：错误对象可到达的路径（构造器/出向 API 的同步 throw、async reject）
+  必须显式断言 `category` 全等（闭集与映射见 §2.2，不得自造取值）；入向校验把 WopError
+  吞并为 `VerifyResult{ok, reason}` 的路径上 category 不可观测，禁止为其编写伪断言
+  （应归类为等价变异体，见下条）。
+- **变异测试幸存体处置**：每轮变异运行的幸存体必须**逐个归档**——附等价性证明
+  （黑盒不可区分的构造性论证）或测试缺口修复，禁止只报击杀率数字；
+  环境等价（仅特定运行时可区分）须注明触发环境（范例：wop-typescript-sdk
+  `tests/mutation/EQUIVALENT-MUTANTS.md`，13 个幸存体全部举证）。
+- 等价变异体中的**死代码信号**（如套件缓存表预注册使支持表对应项黑盒不可达）应回溯
+  main 侧简化建议，经 PR 处理；测试侧不得以「测不可达代码」的方式制造假覆盖。
+
+### D7. 变异测试门禁档位（2026-08-31 wop-dotnet-sdk 变异闭环实证后增补，待 PR 评审）
+
+> 实证背景：wop-dotnet-sdk 四维覆盖率 100% 后，Stryker.NET 4.16（Advanced 级、1194
+> 变异体、24 类算子）首轮击杀率仅 83.17%——行/分支 100% 覆盖对「错误文案漂移、解码
+> 索引边界、随机流合同、时间窗上界」类回归完全失明；四轮补测后 96.5%（存活 29 个
+> 逐个论证等价）。与 wop-typescript-sdk 自研变异闭环（D6 实证）互为佐证：
+> 覆盖率门禁之上的变异档位是必要的第二层防线。
+
+- **门禁档位**：击杀率（killed+timeout / 有效且非等价变异体）**≥ 90%**；编译无效/构建错误、
+  无覆盖及其他未执行变异体**不计入分母**（须单独统计并归档，见「分母披露」），与 A3/A4
+  覆盖率门禁（≥98%）并列；作为定期/发布前档位运行（变异全量跑进每 PR 的成本由各仓自评），
+  结果归档进仓内 `StrykerOutput` 等价物或 `tests/mutation/` 目录。
+- **算子多样性**：受测变异体须覆盖 ≥10 类算子，且至少含条件边界、数学、返回值/语句、
+  常量（字符串/布尔）四族——单一算子族的高击杀率不构成通过依据。
+- **等价清单评审**：从分母剔除等价变异体须满足 D6 幸存体处置条款（逐个举证），
+  且排除配置（行级/字符跨度级）与举证文档一并入 PR 评审——排除项是审查重点，
+  禁止「先排除后论证」。
+- **分母披露**：门禁报告必须同时给出四个计数——生成总数、无效数（编译/构建错误）、
+  等价排除数、计分数（= 生成总数 − 无效 − 等价排除）——以及原始得分
+  （killed+timeout / 生成总数）与排除后得分（killed+timeout / 计分数）；仅排除后得分
+  经 PR 评审（等价清单获批）后方可作为门禁依据。未披露排除规模的得分跨仓不可比，
+  禁止以扩充等价清单换取达标。
+- **工具口径注记**（Stryker.NET）：行级细粒度过滤语法 `File.cs{start..end}` 的
+  start/end 为**字符索引**而非行号（官方文档明确），直接写行号会静默错位；
+  须由脚本从行号清单换算（范例：wop-dotnet-sdk `scripts/gen-stryker-excludes.py`）。
 
 ## 附录 E：跨语言质量任务统一契约（2026-08-29 增补）
 
