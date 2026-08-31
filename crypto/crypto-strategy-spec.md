@@ -532,7 +532,7 @@ sequenceDiagram
 | 报文加密 | SM4-GCM/NoPadding | key 16B / IV 12B / tag 128b，密文 = ciphertext‖tag |
 | 密钥加密 | SM2 | C1C3C2 裸拼接（C1 = 未压缩点 65B），Base64URL 无填充 |
 | 摘要 | SM3 | `x-wop-content-digest: sm3 <小写hex>` |
-| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **已钉（D14，2026-08-31 飞书裁决）**：userId = 请求头 `x-wop-appkey` 值；无 appkey 视为非法输入，实现不得静默回退默认。黄金向量在 `inputs.sm2UserId` 中固定 `1234567812345678`（crypto-vectors.json）——仅作向量夹具，不构成默认值证明 |
+| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **已钉（D14，2026-08-31 飞书裁决）**：userId = 请求头 `x-wop-appkey` 值；无 appkey 视为非法输入，实现不得静默回退默认。黄金向量在 `inputs.sm2UserId` 中固定 `1234567812345678`（crypto-vectors.json）——该值**非真实 appkey**（fixture 值），仅作向量夹具，不构成默认值证明；待向量再生成时迁移 |
 
 ---
 
@@ -576,4 +576,4 @@ sequenceDiagram
 | D11 | SM4-GCM 维持；JS/PHP/.NET 由官方 SDK 承接；新增 E5 |
 | D12 | 公钥分发编码（SPKI Base64 / SM2 未压缩点）移入协议章节 3.4 |
 | D13 | R5 改写：映射集中注册于代码，扩展需发版，无运行时配置入口 |
-| D14 | **userId 契约已钉（2026-08-31 飞书裁决）**：SM3withSM2 的 ZA 计算 userId = 请求头 `x-wop-appkey` 值；无 appkey 视为非法输入，实现不得静默回退默认（排除 sm-crypto-v2 空串默认）。黄金向量在 `inputs.sm2UserId` 固定 `1234567812345678` 仅作向量夹具，不构成默认值证明 | **已钉**（2026-08-31） |
+| D14 | **userId 契约已钉（2026-08-31 飞书裁决）**：SM3withSM2 的 ZA 计算 userId = 请求头 `x-wop-appkey` 值；无 appkey 视为非法输入，实现不得静默回退默认（排除 sm-crypto-v2 空串默认）。黄金向量在 `inputs.sm2UserId` 固定 `1234567812345678` 仅作向量夹具、**非真实 appkey**（fixture 值），不构成默认值证明；待向量再生成时迁移 | **已钉**（2026-08-31） |
