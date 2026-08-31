@@ -532,6 +532,7 @@ sequenceDiagram
 | 报文加密 | SM4-GCM/NoPadding | key 16B / IV 12B / tag 128b，密文 = ciphertext‖tag |
 | 密钥加密 | SM2 | C1C3C2 裸拼接（C1 = 未压缩点 65B），Base64URL 无填充 |
 | 摘要 | SM3 | `x-wop-content-digest: sm3 <小写hex>` |
+| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **契约空白（D14 待钉）**：实现侧默认值不一致（BC / emmansun-gmsm / gmssl = `1234567812345678`，sm-crypto-v2 = 空串），跨语言签名不匹配风险；网关参考实现隐式默认 `1234567812345678`（Sm2SignatureStrategy.java 注释）与黄金向量一致（CryptoVectorConformanceTest.java:94） |
 
 ---
 
@@ -575,3 +576,4 @@ sequenceDiagram
 | D11 | SM4-GCM 维持；JS/PHP/.NET 由官方 SDK 承接；新增 E5 |
 | D12 | 公钥分发编码（SPKI Base64 / SM2 未压缩点）移入协议章节 3.4 |
 | D13 | R5 改写：映射集中注册于代码，扩展需发版，无运行时配置入口 |
+| D14 | **userId 契约待钉**：SM3withSM2 的 ZA 计算需 userId，spec 正文未定义 → 各库默认值不一致（BC/gmsm/gmssl=`1234567812345678`，sm-crypto-v2=空串）导致跨语言签名漂移。网关参考实现与黄金向量隐式 `1234567812345678`。待评审：显式钉死默认 userId 并纳入黄金向量声明 | 待钉 |
