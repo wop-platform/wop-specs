@@ -79,5 +79,5 @@
 4. **spec 版本事件联动清单**：任何决策钉死 / 版本 bump / 状态变更合入后，必须逐项核对下列索引面并同 PR（或紧随 PR）刷新（全仓 `grep 'v0\.'` 自查）：
    - 本 README 文档目录表的「版本 / 状态」列；
    - `docs/fault-injection-playbook.md` 头注「协议依据」；
-   - `interop/v1/interop-cases.json` 的 `_meta.specVersion`（仅随样本集**再生成**刷新，禁手改；见 interop/v1/README.md 版本戳纪律）；
+   - `interop/v1/interop-cases.json` 的 `_meta.specVersion`——**例外：禁手改、不随 spec 事件直接刷新**，仅随样本集六仓协同**再生成**刷新（单仓改字节会分叉冻结合同）；spec 版本事件时只核对 interop/v1/README.md 现状注记是否仍成立（样本字节语义是否受影响），语义未变则维持冻结；
    - 各实现仓 README 及其他引用旧版本号的文档。
