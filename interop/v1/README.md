@@ -4,6 +4,11 @@
 > `crypto/crypto-vectors.json` 同一纪律：禁手改、CI 与本地消费同一副本）。
 > 生成器：`wop-go-sdk` 的 `interopgen_test.go`（`UPDATE_INTEROP=1 go test -run TestInteropGenerate`），
 > 生成结果确定性（两次生成 sha256 一致）。样本密钥全部 TEST-ONLY，与黄金向量同源。
+> 版本戳纪律：`_meta.specVersion` 随 spec 版本事件由**再生成**刷新（禁手改）；再生成时必须
+> 补记 `generatedAt`（RFC3339）；消费仓以 `_meta` 为样本集版本的唯一依据。
+> 现状注记（2026-09-01）：`_meta.specVersion` 现值为 v0.3 合并口径；v0.4-draft 变更（D14 出向钉死等）
+> 不改变样本字节语义——wop-go-sdk main 上 Build/Verify 消费测试双绿（2026-09-01 M2 取证）。
+> `_meta` 刷新随六仓协同再生成执行（单仓改字节会分叉冻结合同），interop 样本集此刻无需再生成。
 
 ## 目的
 
@@ -43,11 +48,13 @@ canonicalRequest 拼装、x-wop-sign 结构、signedHeaders 组装、L2 信封�
 
 | class | 语义（10.2） | 典型样本 |
 |---|---|---|
-| `verify-failed` | 验签类，**模糊**（文案恒定无细节） | n01? 否——n16 重放、n02 之前的签名层故障 |
+| `verify-failed` | 验签类，**模糊**（文案恒定无细节） | n16 重放等签名层故障 |
 | `decrypt-failed` | 解密类，**模糊** | n01 密文损伤、n05 C1C2C3、n13 DEK 键长 |
 | `digest-mismatch` | 完整性类，明确 | n02、n09（**n09"有 body 缺 digest 头"亦归此类**——D2 把"缺失"与"不匹配"同视为完整性破坏，非结构格式问题） |
 | `alg-mismatch` | 一致性类，明确（D8） | n04 |
 | `protocol` | 解析/协议结构类，明确 | n03/n06/n07/n08/n10/n11/n12/n14/n15 |
+
+**跨域对照**：canonical 五类 ↔ crypto-spec §10.2 网关九类 ↔ sdk-spec §2.2 出向七值的完整映射见 crypto-strategy-spec §10.3。
 
 **已裁决的跨仓分歧**（各仓拉齐基线）：
 
@@ -63,6 +70,7 @@ canonicalRequest 拼装、x-wop-sign 结构、signedHeaders 组装、L2 信封�
 | n01 | P1 信封密文损伤（digest+签名重算后直达 AEAD 层） |
 | n12 | P2 信封截断/缺字段（结构层，与 n01 构成 I7 分界对照） |
 | n13 | P3 DEK key 段畸形 |
+| n11 | P4 响应声明跨族套件（声明与配置比对是公开结构知识，协议类明确拒绝） |
 | n16 | P5 跨端点签名重放（`verifyPath` 覆盖） |
 | n06 | P6 签名段 urlencode 污染 |
 | p13(混合大小写) | P7 头名大小写混合 |

@@ -4,7 +4,7 @@
 > 日期：2026-08-28
 > 裁决记录：Q1 传输层=协议核心+可插拔 HTTP 适配层（用户裁决）；Q7 TS/PHP 首版仅 RSA 套件、国密列路线图（用户裁决）；Q2–Q6 按草案默认立场通过（已列明无异议）
 > 适用仓库：github.com/wop-platform/wop-{lang}-sdk
-> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——本文件为网关侧工作副本，修订以真源为准并双向同步
+> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——即本文件（wop-specs 仓唯一维护版）；网关仓保留同名工作副本，修订以本仓为准并双向同步
 
 ---
 
@@ -97,6 +97,7 @@ WopClient / WopConfig
 
 - 入向校验（`verifyResponse` / `verifyCallback`）不抛 WopError，吞并为
   `VerifyResult{ok, reason}`（I7）；该路径 category 不可观测（D6 禁伪断言的依据）。
+- 错误类目跨域对照（本表七值 ↔ crypto-spec §10.2 网关九类 ↔ interop canonical 五类 ↔ playbook 伪码）见 crypto-strategy-spec §10.3。
 
 ## 3. 各语言实现约束
 
@@ -135,7 +136,7 @@ WopClient / WopConfig
 
 ## 6. 决策记录
 
-Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.0-ratified。
+Q1/Q7 用户裁决，Q2–Q6 默认通过（ratify 无逐条分歧记录，以草案默认立场整体通过），详见文件头。spec 冻结为 v1.0-ratified。
 
 ## 附录 D：跨语言实现勘误与补充纪律（2026-08-29 增补，v1.0-ratified 后勘误）
 
@@ -156,7 +157,7 @@ Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.
 
 ### D2. 向量 fixture 同步机制（A1/A2 执行细则）
 
-- 各仓 fixture 是真源（`gtsp-wop-gateway/docs/crypto-vectors.json`）的**字节副本**；CI 必须含"真源 vs 本地副本
+- 各仓 fixture 是真源（本仓 `crypto/crypto-vectors.json`，wop-specs）的**字节副本**；CI 必须含"真源 vs 本地副本
   字节比对"步骤，**不一致即 fail**（禁止降级为 warning）。
 - formatRules 消费**三件套**（缺一即视为未消费）：
   1. 循环全量消费（禁止按 id 点名）；
@@ -206,7 +207,7 @@ Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.
 - 等价变异体中的**死代码信号**（如套件缓存表预注册使支持表对应项黑盒不可达）应回溯
   main 侧简化建议，经 PR 处理；测试侧不得以「测不可达代码」的方式制造假覆盖。
 
-### D7. 变异测试门禁档位（2026-08-31 wop-dotnet-sdk 变异闭环实证后增补，待 PR 评审）
+### D7. 变异测试门禁档位（2026-08-31 wop-dotnet-sdk 变异闭环实证后增补，已经 PR #6 评审合入）
 
 > 实证背景：wop-dotnet-sdk 四维覆盖率 100% 后，Stryker.NET 4.16（Advanced 级、1194
 > 变异体、24 类算子）首轮击杀率仅 83.17%——行/分支 100% 覆盖对「错误文案漂移、解码

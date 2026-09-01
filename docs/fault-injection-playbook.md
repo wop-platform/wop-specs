@@ -1,7 +1,7 @@
 # WOP SDK 故障注入测试手册（各语言通用 Playbook）
 
 > 版本：1.0（2026-08-29，源自 wop-java-sdk 实测场景；`FaultInjectionTest` / `OkHttpTransportFaultInjectionTest` / `JdkHttpTransportFaultInjectionTest`）
-> 适用：wop-{go,java,typescript,python,php,dotnet}-sdk 各仓（本手册为组织级真源，各仓消费副本或链接）；协议依据 crypto-strategy-spec v0.3（D2/F6/I7/10.2）
+> 适用：wop-{go,java,typescript,python,php,dotnet}-sdk 各仓（本手册为组织级真源，各仓消费副本或链接）；协议依据 crypto-strategy-spec v0.4-draft（D2/I7/§10.2）+ sdk-spec F6（校验顺序，sdk/wop-sdk-spec.md §1.3）
 > 纪律：**先写测试看它对未注入的实现通过（绿），再注入故障看它拒绝（红）**——与 TDD 红→绿同构；每条场景必须断言到"错误分类"，不只是"抛异常"
 
 ## 0. 判定基线（每条断言的唯一锚）
@@ -13,6 +13,8 @@
 
 **核心测试设计**：构造"格式全部合法、仅密钥参与层被破坏"的载体，断言它落模糊类；
 构造"结构层就坏"的载体，断言它落明确类——两条对照钉死 I7 分界。
+
+**跨域对照**：本手册 Reason 伪码 ↔ interop canonical class ↔ crypto-spec §10.2 网关九类的完整映射见 crypto-strategy-spec §10.3。
 
 ## 1. 协议层注入矩阵（7 条，全部必做）
 

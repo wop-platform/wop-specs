@@ -6,6 +6,11 @@
 > CI：口径B 门禁 ≥80% 已入 `.github/workflows/mutation.yml`（PR 增量 + 每周全量）
 > 注记：本清单基于第四轮副本；其后第四/五批补杀断言（keys 78/81、signheader 35/52、
 > transport 41、verify 37/59、sm2Decrypt 253 系）已随仓提交，下次全量将转为 killed。
+> 复核（2026-09-01 M5，PR#18 diff run #33414842401 artifact + 手动复放）：上句预测 4/7 未兑现
+> ——keys 78/81、signheader 35、transport 41、verify 37 仍存活；signheader 52、verify 59、
+> sm2Decrypt 253 系已证实击杀。同轮全量引擎实测口径B 82.8%（912/1101，run #33376096106），
+> 与本档案人工归组基线 84.9%（910/1072）分母口径不同，不可直接对比；终判以 2026-09-07
+> 每周全量 run 为准。
 
 ## 分组汇总
 
