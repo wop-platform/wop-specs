@@ -2,7 +2,7 @@
 
 > 版本：v0.4-draft
 > 日期：2026-08-31
-> 状态：已评审（决策 D1–D14 冻结，见附录 C）
+> 状态：已评审（决策 D1–D15 冻结，见附录 C）
 > 范围：仅描述**目标需求**，不涉及现有实现（绿地需求文档，D1）
 > 配套测试向量：[crypto-vectors.json](crypto-vectors.json)（TEST-ONLY 密钥，跨语言字节级断言基准，附录 B.2 / D9 的载体）
 
@@ -565,7 +565,7 @@ sequenceDiagram
 | 报文加密 | SM4-GCM/NoPadding | key 16B / IV 12B / tag 128b，密文 = ciphertext‖tag |
 | 密钥加密 | SM2 | C1C3C2 裸拼接（C1 = 未压缩点 65B），Base64URL 无填充 |
 | 摘要 | SM3 | `x-wop-content-digest: sm3 <小写hex>` |
-| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **已钉（D14，2026-08-31 飞书裁决）**：userId 源自商户配置 `appKey`，SDK `buildRequest` 必须将其序列化为请求头 `x-wop-appkey`（恒必传且参与签名，SDK spec §2.1），ZA 计算必须使用同一值——签名身份与请求身份恒同源；缺少 appKey 视为非法输入（configuration 类），实现不得静默回退默认。黄金向量在 `inputs.sm2UserId` 中固定 `1234567812345678`（crypto-vectors.json）——该值**非真实 appkey**（fixture 值），仅作向量夹具，不构成默认值证明；待向量再生成时迁移 |
+| userId（ZA） | SM3withSM2 的 ZA 计算入参 | **已钉（D14，2026-08-31 飞书裁决，限出向 buildRequest）**：userId 源自商户配置 `appKey`，SDK `buildRequest` 必须将其序列化为请求头 `x-wop-appkey`（恒必传且参与签名，SDK spec §2.1），ZA 计算必须使用同一值——签名身份与请求身份恒同源；缺少 appKey 视为非法输入（configuration 类），实现不得静默回退默认。**入向验签不适用本条款（D15）**：维持平台协议固定值 `1234567812345678`（与平台加签身份显式对齐，非静默回退默认）。黄金向量在 `inputs.sm2UserId` 中固定 `1234567812345678`（crypto-vectors.json）——该值**非真实 appkey**（fixture 值），仅作向量夹具，不构成默认值证明；待向量再生成时迁移 |
 
 ---
 
@@ -592,7 +592,7 @@ sequenceDiagram
 
 ---
 
-## 附录 C：评审决策记录（D1–D14）
+## 附录 C：评审决策记录（D1–D15）
 
 | # | 决议 |
 |---|------|
@@ -610,3 +610,4 @@ sequenceDiagram
 | D12 | 公钥分发编码（SPKI Base64 / SM2 未压缩点）移入协议章节 3.4 |
 | D13 | R5 改写：映射集中注册于代码，扩展需发版，无运行时配置入口 |
 | D14 | **userId 契约已钉（2026-08-31 飞书裁决）**：SM3withSM2 的 ZA 计算 userId = 请求头 `x-wop-appkey` 值，该头由商户配置 `appKey` 序列化而来（恒必传且参与签名，SDK spec §2.1），ZA 与出向请求必须使用同一值；无 appkey 视为非法输入，实现不得静默回退默认（排除 sm-crypto-v2 空串默认）。黄金向量在 `inputs.sm2UserId` 固定 `1234567812345678` 仅作向量夹具、**非真实 appkey**（fixture 值），不构成默认值证明；待向量再生成时迁移 | **已钉**（2026-08-31） |
+| D15 | **入向验签 userId 维持平台固定值——「选项 B」否决留档（2026-09-01 审计裁决）**：曾提案将 D14「ZA userId = `x-wop-appkey`」扩展至入向 verify（平台响应/回调验签）；裁决**否决**。理由：① D14 权威边界仅覆盖出向 `buildRequest`（条文明言「ZA 与出向请求必须使用同一值」，2026-08-31 飞书裁决），扩展入向属新立法而非既有裁决适用；② 入向报文签名身份属**平台域**——平台加签响应/回调 ZA 使用协议固定值 `1234567812345678`（平台侧签名、interop 样本平台签名、Java 网关参考实现 `DEFAULT_USER_ID` 三方同源），SDK 若钉死 appKey 将与平台加签行为不一致、入向验签必然失败；③ 六仓入向实现现状一致（interop CI 双绿，2026-09-01 M2 取证），无跨仓漂移压力。**维持现状**：入向 verify 的 ZA userId = 平台协议固定值（参考实现 wop-go-sdk `sm2PlatformUserID`，signature.go）；出向 D14 原条款不变。平台侧若未来协议化定义响应签名身份语义，另立新条款 | **已裁决**（2026-09-01） |

@@ -47,7 +47,7 @@
 | 前缀 | 系列 | 定义处 |
 |------|------|--------|
 | crypto-spec R1–R5 | 需求条目 | crypto-strategy-spec §1.2 |
-| crypto-spec D1–D14 | 协议评审决策 | crypto-strategy-spec 附录 C |
+| crypto-spec D1–D15 | 协议评审决策 | crypto-strategy-spec 附录 C |
 | crypto-spec E1–E5 | 扩展性需求 | crypto-strategy-spec §8 |
 | crypto-spec I1–I7 | 协议不变式 | crypto-strategy-spec §10.1 |
 | crypto-spec Q1–Q5 | 已关闭五问 | crypto-strategy-spec §9（决策已并入附录 C） |
