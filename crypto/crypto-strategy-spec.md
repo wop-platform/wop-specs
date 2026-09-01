@@ -31,7 +31,7 @@ WOP 网关在处理请求时，需根据客户端在 `x-wop-sign` 中声明的 `
 
 ### 1.3 不在本 Spec 范围
 
-- canonicalRequest 拼装规则
+- canonicalRequest 拼装规则（→ sdk-spec 附录 G 承接立法，2026-09-01）
 - 密钥存储与加载机制（**公钥分发编码除外**——分发格式是商户集成契约，已纳入 3.4，D12）
 - LEGACY 固定密钥兼容链
 
@@ -539,7 +539,7 @@ sequenceDiagram
 |------|------|
 | 分块流式 AEAD 信封（协议 v2，大文件） | 后续协议设计议题（6.3 挂起） |
 | LEGACY 固定密钥兼容链 | 1.3 排除 |
-| canonicalRequest 拼装规则 | 1.3 排除 |
+| canonicalRequest 拼装规则 | 1.3 排除 → wop-sdk-spec 附录 G（SDK 承接，2026-09-01 立法） |
 | 既有仓库实现与本 spec 的切换计划 | 实施计划阶段（D1：绿地身份决定 spec 不欠代码交代） |
 
 ---

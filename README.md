@@ -55,6 +55,7 @@
 | sdk-spec F1–F9 | SDK 功能面 | wop-sdk-spec §1.3 |
 | sdk-spec D1–D7 | 跨语言实现勘误纪律 | wop-sdk-spec 附录 D |
 | sdk-spec E1–E3 | 跨语言质量任务契约 | wop-sdk-spec 附录 E |
+| sdk-spec G1–G3 | canonicalRequest 拼装规则 | wop-sdk-spec 附录 G |
 | sdk-spec A1–A7 | 每仓验收标准 | wop-sdk-spec §5 |
 | playbook P1–P7 / N1–N6 | 故障注入场景 | fault-injection-playbook §1/§2 |
 

@@ -16,7 +16,8 @@
 
 黄金向量证明**算法原语与线上编码**跨语言一致；本样本集补上**协议编排**一致性：
 canonicalRequest 拼装、x-wop-sign 结构、signedHeaders 组装、L2 信封、F6 校验顺序
-与**错误分类**（明确 vs 模糊，I7 分界）。
+与**错误分类**（明确 vs 模糊，I7 分界）。canonicalRequest 拼装的字节级权威条文见
+sdk-spec 附录 G（G1–G3，2026-09-01 立法；以本样本集与参考实现 wop-go-sdk main 为事实源）。
 
 ## 两种用例方向
 
