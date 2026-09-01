@@ -31,7 +31,7 @@ WOP 网关在处理请求时，需根据客户端在 `x-wop-sign` 中声明的 `
 
 ### 1.3 不在本 Spec 范围
 
-- canonicalRequest 拼装规则
+- canonicalRequest 拼装规则（→ sdk-spec 附录 G 承接立法，2026-09-01）
 - 密钥存储与加载机制（**公钥分发编码除外**——分发格式是商户集成契约，已纳入 3.4，D12）
 - LEGACY 固定密钥兼容链
 
@@ -148,7 +148,7 @@ securityReq
 | AES-256-GCM | `AES/GCM/NoPadding` | 32 字节 | 12 字节 | 128 bit |
 | SM4-GCM | `SM4/GCM/NoPadding` | 16 字节 | 12 字节 | 128 bit |
 
-- **密文线上格式 = `ciphertext‖tag` 尾部拼接**，整体 Base64URL 无填充。PHP `openssl_encrypt` 与 .NET `AesGcm` 的 tag 为独立出参，拼接动作在商户侧完成——集成指南必须显式说明（D10/F4）
+- **密文线上格式 = `ciphertext‖tag` 尾部拼接**，整体 Base64URL 无填充。PHP `openssl_encrypt` 与 .NET `AesGcm` 的 tag 为独立出参，拼接动作在商户侧完成——集成指南必须显式说明（D10）
 - 加密时 **CSPRNG 随机生成 IV**，随 DEK 载荷一并传递；解密时使用 DEK 载荷中的 IV
 - **同一对称密钥下 IV 永不复用**（协议不变式 I4，见 10.1）
 
@@ -160,7 +160,7 @@ securityReq
 | RSA-4096-OAEP | 同上，密钥 4096 位 | |
 | SM2 | SM2 公钥加密 | 线上密文 = **C1C3C2 裸拼接**（新国标 GM/T 0003），C1 = 未压缩点 `04‖X‖Y` 65 字节，整体 Base64URL 无填充，变长 |
 
-**OAEP 参数必须显式构造**（D10/F2，头号跨语言漂移源）：
+**OAEP 参数必须显式构造**（D10，头号跨语言漂移源）：
 
 ```java
 new OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA256, PSource.PSpecified.DEFAULT)
@@ -496,6 +496,39 @@ sequenceDiagram
 
 **明确 / 模糊分界原则**：鉴权前可判定的公开协议知识 → 明确（帮助商户集成自查）；依赖密钥参与的判定 → 模糊（防 oracle）。
 
+### 10.3 错误分类跨域对照（网关 / SDK 出向 / SDK 入向 / playbook）
+
+同一协议事实在三个校验域使用不同类目名，语义恒一致：公开结构知识 → 明确，密钥参与 → 模糊（I7 贯穿三域）。
+
+**（1）本表 §10.2（网关九类）↔ sdk-spec §2.2 WopError（SDK 出向七值）**
+
+| 协议事实 | 网关 §10.2 | SDK 出向 category |
+|---|---|---|
+| securityReq 三段式 / 头格式错 | 解析类（明确） | `parse` |
+| 算法不在列表 / 配置侧跨族 / 密钥材料非法 | 支持类（明确） | `configuration` |
+| 合法套件但本 SDK 未实现（TS/PHP 首版 SM） | —（网关不感知） | `unsupported` |
+| digest 不匹配 | 完整性类（明确） | `integrity` |
+| dek alg 与套件族不符（I3） | 一致性类（明确） | `consistency` |
+| 验签失败 | 验签类（**模糊**） | `signature`（**模糊**） |
+| DEK 解包 / GCM tag 失败 | 解密类（**模糊**） | `decrypt`（**模糊**，两路径同文案） |
+| timestamp 窗口 / nonce 重放 | 时效重放类（明确） | —（出向不校验；入向见下表 `verify-failed`） |
+| body 超上限 | 限额类（明确） | —（传输适配器层，见 sdk-spec 附录 D4） |
+| 网关密钥缺失 / 内部异常 | 系统类（SYS） | —（网关侧类目，SDK 无对应） |
+
+**（2）interop canonical 五类（SDK 入向，interop/v1 冻结合同）↔ 本表 §10.2**
+
+| canonical class | 触发样本 | §10.2 对应 |
+|---|---|---|
+| `verify-failed`（**模糊**） | 验签层失败、跨端点重放（n16） | 验签类 |
+| `decrypt-failed`（**模糊**） | 密文损伤 / C1C2C3 序 / DEK 键长（n01/n05/n13） | 解密类 |
+| `digest-mismatch`（明确） | digest 缺失或不匹配（n02/n09，D2「缺失」同视为完整性破坏） | 完整性类 |
+| `alg-mismatch`（明确，D8） | dek alg 跨族（n04） | 一致性类 |
+| `protocol`（明确） | 头格式 / 编码 / 信封结构 / 签名段格式 / 缺必签头 / 响应声明套件≠本地配置（n03/n06–n12/n14/n15） | 解析类或支持类（视触发点） |
+
+注：跨族在网关域归「支持类」（校验请求声明的套件合法性），在 SDK 入向域归 `protocol`（n11 裁决：响应声明与本地配置的比对是公开结构知识）——域不同、类目名不同，语义同为「公开结构知识、明确拒绝」。
+
+**（3）playbook Reason 伪码 ↔ canonical**：P1/P3 `DECRYPT_FAILED`→`decrypt-failed`、P2 `INVALID_ENCRYPTED_BODY`→`protocol`、P4 套件一致性→`protocol`（n11）、P5 `SIGNATURE_FAILED`→`verify-failed`、P6 签名段污染→`protocol`（n06）、P7→ok。playbook 大写伪码是测试断言语义，canonical 小写是 JSON 冻结合同；各仓断言须锚定 canonical 语义，大小写形态随测试惯例。
+
 ---
 
 ## 明确未决清单
@@ -506,7 +539,7 @@ sequenceDiagram
 |------|------|
 | 分块流式 AEAD 信封（协议 v2，大文件） | 后续协议设计议题（6.3 挂起） |
 | LEGACY 固定密钥兼容链 | 1.3 排除 |
-| canonicalRequest 拼装规则 | 1.3 排除 |
+| canonicalRequest 拼装规则 | 1.3 排除 → wop-sdk-spec 附录 G（SDK 承接，2026-09-01 立法） |
 | 既有仓库实现与本 spec 的切换计划 | 实施计划阶段（D1：绿地身份决定 spec 不欠代码交代） |
 
 ---

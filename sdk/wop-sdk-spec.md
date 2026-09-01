@@ -4,7 +4,7 @@
 > 日期：2026-08-28
 > 裁决记录：Q1 传输层=协议核心+可插拔 HTTP 适配层（用户裁决）；Q7 TS/PHP 首版仅 RSA 套件、国密列路线图（用户裁决）；Q2–Q6 按草案默认立场通过（已列明无异议）
 > 适用仓库：github.com/wop-platform/wop-{lang}-sdk
-> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——本文件为网关侧工作副本，修订以真源为准并双向同步
+> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——即本文件（wop-specs 仓唯一维护版）；网关仓保留同名工作副本，修订以本仓为准并双向同步
 
 ---
 
@@ -39,7 +39,7 @@
 | # | 功能 | 说明 | 依据 |
 |---|------|------|------|
 | F1 | 套件配置与解析 | securityReq 三套件（RSA3072/4096、SM2-SM3），跨族/非法拒绝 | spec §2 |
-| F2 | canonicalRequest 构造 | 5 段 `\n`；header 值 Java-URLEncoder 语义（空格→%20 等） | §1.3 排除项→SDK 承接 |
+| F2 | canonicalRequest 构造 | 5 段 `\n`；header 值 Java-URLEncoder 语义（空格→%20 等）；字节级规则详见附录 G | 附录 G（G1–G3） |
 | F3 | 结构化 x-wop-sign | 商户私钥加签（出向）/ 平台公钥验签（响应与回调） | §3.3①、§7.3 |
 | F4 | x-wop-content-digest | `alg 小写hex` 恰一空格；算法随套件族；无 body 缺席；有 body 必传必入签 | D2/D3/I1 |
 | F5 | L2 数字信封 | AES-256-GCM / SM4-GCM 全文加密；DEK 载荷 `alg$key$iv`；RSA-OAEP（显式双 SHA-256+空 label）/ SM2(C1C3C2) 包装 | §3.3②③、§6 |
@@ -97,6 +97,7 @@ WopClient / WopConfig
 
 - 入向校验（`verifyResponse` / `verifyCallback`）不抛 WopError，吞并为
   `VerifyResult{ok, reason}`（I7）；该路径 category 不可观测（D6 禁伪断言的依据）。
+- 错误类目跨域对照（本表七值 ↔ crypto-spec §10.2 网关九类 ↔ interop canonical 五类 ↔ playbook 伪码）见 crypto-strategy-spec §10.3。
 
 ## 3. 各语言实现约束
 
@@ -135,7 +136,7 @@ WopClient / WopConfig
 
 ## 6. 决策记录
 
-Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.0-ratified。
+Q1/Q7 用户裁决，Q2–Q6 默认通过（ratify 无逐条分歧记录，以草案默认立场整体通过），详见文件头。spec 冻结为 v1.0-ratified。
 
 ## 附录 D：跨语言实现勘误与补充纪律（2026-08-29 增补，v1.0-ratified 后勘误）
 
@@ -156,7 +157,7 @@ Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.
 
 ### D2. 向量 fixture 同步机制（A1/A2 执行细则）
 
-- 各仓 fixture 是真源（`gtsp-wop-gateway/docs/crypto-vectors.json`）的**字节副本**；CI 必须含"真源 vs 本地副本
+- 各仓 fixture 是真源（本仓 `crypto/crypto-vectors.json`，wop-specs）的**字节副本**；CI 必须含"真源 vs 本地副本
   字节比对"步骤，**不一致即 fail**（禁止降级为 warning）。
 - formatRules 消费**三件套**（缺一即视为未消费）：
   1. 循环全量消费（禁止按 id 点名）；
@@ -206,7 +207,7 @@ Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.
 - 等价变异体中的**死代码信号**（如套件缓存表预注册使支持表对应项黑盒不可达）应回溯
   main 侧简化建议，经 PR 处理；测试侧不得以「测不可达代码」的方式制造假覆盖。
 
-### D7. 变异测试门禁档位（2026-08-31 wop-dotnet-sdk 变异闭环实证后增补，待 PR 评审）
+### D7. 变异测试门禁档位（2026-08-31 wop-dotnet-sdk 变异闭环实证后增补，已经 PR #6 评审合入）
 
 > 实证背景：wop-dotnet-sdk 四维覆盖率 100% 后，Stryker.NET 4.16（Advanced 级、1194
 > 变异体、24 类算子）首轮击杀率仅 83.17%——行/分支 100% 覆盖对「错误文案漂移、解码
@@ -263,3 +264,54 @@ Q1/Q7 用户裁决，Q2–Q6 默认通过，详见文件头。spec 冻结为 v1.
 
 - 各语言 Gherkin 框架（godog / pytest-bdd / cucumber-js / behat / SpecFlow）场景 ≥10，
   覆盖 F1-F9 + 概念 API（§2）使用场景；"平台响应"构造遵守 D5（不复用被测出向代码）。
+
+---
+
+## 附录 G：canonicalRequest 拼装规则（F2 执行细则，2026-09-01 增补）
+
+> 背景：crypto-strategy-spec §1.3 将 canonicalRequest 拼装排除在密码学策略范围外、由本 spec 承接（F2），
+> 此前仅有 F2 一行摘要，字节级规则真身散落于参考实现（wop-go-sdk `canonical.go`/`encoding.go`）与
+> interop/v1 冻结样本——「SDK 承接」为空声明。本附录以参考实现 main（`79a20e6`）与 interop/v1 字节级
+> 合同为事实源钉死规则（描述性立法，零行为变更）。编号避让：字母 F 已被 §1.3 功能面 F1–F9 占用，
+> 本附录跳用 G（README 条款编号索引同步登记）。
+
+### G1. 五段结构（恒 5 段 4 个 `\n`，空段的分隔空行不可省略）
+
+```
+canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
+                  "\n" canonicalQueryString "\n" canonicalHeaders
+```
+
+- **authString** := `"v1/" + expiredSeconds`（签名协议版本常量 `v1` 斜杠连接 x-wop-sign 声明的
+  有效期秒数，十进制无填充）；
+- **httpRequestMethod**：先去首尾空白，再统一 ASCII 大写（`"post"` → `"POST"`）；
+- **canonicalURI**：调用方（商户 / HTTP 适配层）传入的原始路径**原样使用**，SDK 不做再编码；
+- **canonicalQueryString**：**恒空串**——网关签名面仅 POST（网关 SignFilter 钉死），SDK 对齐；
+  GET 等带 query 场景留待协议 v2 立法；
+- 空段实例：无已签名头时 canonicalHeaders 为空串，canonicalRequest 尾部仍保留第 4 个 `\n`
+  （如 `"v1/1800\nGET\n/p\n\n"`）。
+
+### G2. canonicalHeaders（signedHeaders 规范化）
+
+参与签名的 header 集合 = §2.1 出向必传 header 契约全集（I1「digest 必入签」为其子集不变式）。
+逐头变换：
+
+- **名称**：ASCII lowercase → TrimAll → URLEncode；**值**：TrimAll → URLEncode；
+- **TrimAll**：去首尾空白，且连续空白折叠为单个空格；空白类 = 空格、`\t`、`\n`、`\x0B`、`\f`、`\r`
+  （对齐 Java `Character.isWhitespace` 常见子集）；
+- **URLEncode**（java.net.URLEncoder(UTF-8) 语义 + RFC 3986 钉子）：保留 `[A-Za-z0-9.-*_]`，
+  其余字符按 UTF-8 字节逐一 `%XX`（十六进制**大写**）；空格 → `%20`（非表单 `+`）；`+` → `%2B`；
+- **行格式** `name:value`（冒号后无空格；名称/值中出现的冒号已被 URLEncode 转义为 `%3A`，
+  与分隔符无歧义）；
+- **排序**：按规范化后名称 ASCII 升序；行间 `\n` 连接，**尾行不加 `\n`**；
+- **大小写折叠**：名称仅大小写不同的多个 header 合并为单行、值取其一——取值选择**不定义**
+  （协议未定义行为）；调用方应保证 signedHeaders 名称经 lowercase 后唯一；
+- **空集合** → 空串（G1 尾部空行规则仍适用）。
+
+### G3. 一致性锚与漂移拦截
+
+- **字节级合同**：interop/v1 样本集 29 条（build 方向按 `input` 复现 canonical 与签名；verify 方向
+  消费冻结平台签名），各仓 CI 消费同一字节副本（禁手改、真源在 wop-specs）；
+- **真源优先级**：本附录（wop-specs）> 参考实现 > 样本隐含行为；实现与本附录分歧时以本仓为准
+  （治理第 1 条），漂移由 interop CI 拦截；
+- 新语言接入按本附录实现拼装，禁止以「参考实现即规则」替代条文（自指等价教训见 D6/D7）。

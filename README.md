@@ -7,11 +7,14 @@
 
 | 文档 | 版本 | 状态 | 说明 |
 |------|------|------|------|
-| [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 评审冻结（D1–D13）+ D14 待钉 | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
-| [sdk/wop-sdk-spec.md](sdk/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F9、概念 API、每语言密码依赖白名单、验收标准 A1–A7 |
+| [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 已评审冻结（D1–D14，2026-08-31） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
+| [sdk/wop-sdk-spec.md](sdk/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F9、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、验收标准 A1–A7 |
 | [crypto/crypto-vectors.json](crypto/crypto-vectors.json) | 2026-08-28 | 稳定 | 黄金测试向量（TEST-ONLY 密钥）：跨语言**字节级**断言基准，防实现漂移的验收载体（D9） |
+| [interop/v1/](interop/v1/) | wop-interop-1 | 冻结 | 协议编排互操作样本集（29 条：6 build + 7 positive + 16 negative）：canonicalRequest、signedHeaders、L2 信封与 canonical 错误分类的跨仓一致性合同 |
+| [docs/fault-injection-playbook.md](docs/fault-injection-playbook.md) | 1.0 | 稳定 | 故障注入测试手册：协议层 P1–P7 + 网络层 N1–N6 注入矩阵，I7 明确/模糊分界的测试锚 |
+| [docs/mutation-survivors-wop-go-sdk.md](docs/mutation-survivors-wop-go-sdk.md) | 2026-08-31 | 归档 | wop-go-sdk 变异测试存活清单：265 幸存体逐条等价性论证（diag/hexdead/unreach/math/invariant/prob/chain/review 八组） |
 
-**阅读顺序**：加密协议 spec（协议真源）→ SDK 规格（协议的客户端封装契约）→ 黄金向量（正确性锚）。三份文档版本互相引用，升级须同步。
+**阅读顺序**：加密协议 spec（协议真源）→ SDK 规格（协议的客户端封装契约）→ 黄金向量（正确性锚）→ interop 样本集（编排一致性锚）。各文档版本互相引用，升级须同步（联动清单见「规格治理」第 4 条）。
 
 ## 🛠️ 官方 SDK 实现矩阵
 
@@ -37,6 +40,25 @@
 - **报文安全等级**：L0 明文 + 摘要 / L2 全文数字信封（AES-256-GCM 或 SM4-GCM）
 - **错误纪律**：公开协议知识报错明确，密钥参与判定的失败一律模糊（防 oracle，I7）
 
+## 🔢 条款编号索引
+
+多系列编号在两份 spec 内是**独立空间**（D / E / Q 三组存在同号不同义），跨文档引用必须带文档前缀（如「crypto-spec D14」「sdk-spec D6」），避免同号歧义：
+
+| 前缀 | 系列 | 定义处 |
+|------|------|--------|
+| crypto-spec R1–R5 | 需求条目 | crypto-strategy-spec §1.2 |
+| crypto-spec D1–D14 | 协议评审决策 | crypto-strategy-spec 附录 C |
+| crypto-spec E1–E5 | 扩展性需求 | crypto-strategy-spec §8 |
+| crypto-spec I1–I7 | 协议不变式 | crypto-strategy-spec §10.1 |
+| crypto-spec Q1–Q5 | 已关闭五问 | crypto-strategy-spec §9（决策已并入附录 C） |
+| sdk-spec Q1–Q7 | SDK 裁决记录 | wop-sdk-spec 文件头 + §6 |
+| sdk-spec F1–F9 | SDK 功能面 | wop-sdk-spec §1.3 |
+| sdk-spec D1–D7 | 跨语言实现勘误纪律 | wop-sdk-spec 附录 D |
+| sdk-spec E1–E3 | 跨语言质量任务契约 | wop-sdk-spec 附录 E |
+| sdk-spec G1–G3 | canonicalRequest 拼装规则 | wop-sdk-spec 附录 G |
+| sdk-spec A1–A7 | 每仓验收标准 | wop-sdk-spec §5 |
+| playbook P1–P7 / N1–N6 | 故障注入场景 | fault-injection-playbook §1/§2 |
+
 ## 📐 版本与变更策略
 
 - spec 采用**冻结版本 + 决策记录**制：每条关键裁决有唯一编号（协议 D1–D14、SDK Q1–Q7），正文与决策记录同步演进，不悄悄改
@@ -55,3 +77,8 @@
 2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 的 commit **必须通过 PR 合并进本仓后**，
    各实现仓才能做对应的代码/测试变更（先合 PR、后改码）。
 3. **副本同步**：各仓 CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）。
+4. **spec 版本事件联动清单**：任何决策钉死 / 版本 bump / 状态变更合入后，必须逐项核对下列索引面并同 PR（或紧随 PR）刷新（全仓 `grep 'v0\.'` 自查）：
+   - 本 README 文档目录表的「版本 / 状态」列；
+   - `docs/fault-injection-playbook.md` 头注「协议依据」；
+   - `interop/v1/interop-cases.json` 的 `_meta.specVersion`——**例外：禁手改、不随 spec 事件直接刷新**，仅随样本集六仓协同**再生成**刷新（单仓改字节会分叉冻结合同）；spec 版本事件时只核对 interop/v1/README.md 现状注记是否仍成立（样本字节语义是否受影响），语义未变则维持冻结；
+   - 各实现仓 README 及其他引用旧版本号的文档。
