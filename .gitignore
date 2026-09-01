@@ -1,0 +1,6 @@
+# python
+__pycache__
+
+# .factory 本地治理层：仅本机使用，不入库（2026-09-01 政策裁决，对齐 gtsp-wop-gateway 裁决 A）
+# 本地修补不受 git 保护，注意自行备份
+.factory/
