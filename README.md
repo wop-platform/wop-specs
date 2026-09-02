@@ -90,8 +90,9 @@
    教训来源：D15 留档（PR #10）仅更新索引表，漏目录与策略两处致 README 内部矛盾，由评审评论捕获。
 
 6. **interop 样本集增删联动核查**：样本集增删（`_meta.caseCount` 变更）的 PR，合并前必须以**变更前**
-   的 `_meta.caseCount` 为模式（增删同式：现值 30 条时无论增至 31 还是删至 29，均
-   `grep -rn '30 条' .`）全仓自查，旧引用归零方可合并。引用面纪律：样本条数硬编码仅限本
+   的计数 N（增删同式）为模式（N 自 PR 基准派生：`N=$(git show origin/main:interop/v1/interop-cases.json | jq -r '._meta.caseCount')`；
+   `grep -rn "${N} 条" .`）全仓自查，旧引用归零方可合并——示例参数化以规避规则文本自命中（机制同规则 5
+   `[–-]` 字符类的正则自匹配免疫）。引用面纪律：样本条数硬编码仅限本
    README 文档目录（索引进，总计数）与 `interop/v1/` 真源自述（分项计数）；分项自述须与
    `cases` 按 kind 派生一致（`jq -r '.cases | group_by(.kind) | map({key: .[0].kind, value: length})' interop/v1/interop-cases.json`），随样本集同 PR 变更，非漂移面；
    spec 正文指针式引用——条数以 `interop/v1/interop-cases.json` 的 `_meta.caseCount` 为唯一真源，
