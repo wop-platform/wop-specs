@@ -7,7 +7,7 @@
 
 | 文档 | 版本 | 状态 | 说明 |
 |------|------|------|------|
-| [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 已评审冻结（D1–D14，2026-08-31） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
+| [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 已评审冻结（D1–D15，2026-09-01） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
 | [sdk/wop-sdk-spec.md](sdk/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F9、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、验收标准 A1–A7 |
 | [crypto/crypto-vectors.json](crypto/crypto-vectors.json) | 2026-08-28 | 稳定 | 黄金测试向量（TEST-ONLY 密钥）：跨语言**字节级**断言基准，防实现漂移的验收载体（D9） |
 | [interop/v1/](interop/v1/) | wop-interop-1 | 冻结 | 协议编排互操作样本集（29 条：6 build + 7 positive + 16 negative）：canonicalRequest、signedHeaders、L2 信封与 canonical 错误分类的跨仓一致性合同 |
@@ -61,7 +61,7 @@
 
 ## 📐 版本与变更策略
 
-- spec 采用**冻结版本 + 决策记录**制：每条关键裁决有唯一编号（协议 D1–D14、SDK Q1–Q7），正文与决策记录同步演进，不悄悄改
+- spec 采用**冻结版本 + 决策记录**制：每条关键裁决有唯一编号（协议 D1–D15、SDK Q1–Q7），正文与决策记录同步演进，不悄悄改
 - 黄金向量变更 = 破坏性变更：须 bump 向量版本并同步六个 SDK 仓 fixture，CI 全红即拦截漂移
 - 本仓库不含任何内部实现细节；网关实现侧文档不在公开范围
 
