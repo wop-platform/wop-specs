@@ -10,7 +10,7 @@
 | [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 已评审冻结（D1–D15，2026-09-01） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
 | [sdk/wop-sdk-spec.md](sdk/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F9、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、验收标准 A1–A7 |
 | [crypto/crypto-vectors.json](crypto/crypto-vectors.json) | 2026-08-28 | 稳定 | 黄金测试向量（TEST-ONLY 密钥）：跨语言**字节级**断言基准，防实现漂移的验收载体（D9） |
-| [interop/v1/](interop/v1/) | wop-interop-1 | 冻结 | 协议编排互操作样本集（29 条：6 build + 7 positive + 16 negative）：canonicalRequest、signedHeaders、L2 信封与 canonical 错误分类的跨仓一致性合同 |
+| [interop/v1/](interop/v1/) | wop-interop-1 | 冻结 | 协议编排互操作样本集（30 条：6 build + 7 positive + 17 negative）：canonicalRequest、signedHeaders、L2 信封与 canonical 错误分类的跨仓一致性合同 |
 | [docs/fault-injection-playbook.md](docs/fault-injection-playbook.md) | 1.0 | 稳定 | 故障注入测试手册：协议层 P1–P7 + 网络层 N1–N6 注入矩阵，I7 明确/模糊分界的测试锚 |
 | [docs/mutation-survivors-wop-go-sdk.md](docs/mutation-survivors-wop-go-sdk.md) | 2026-08-31 | 归档 | wop-go-sdk 变异测试存活清单：265 幸存体逐条等价性论证（diag/hexdead/unreach/math/invariant/prob/chain/review 八组） |
 
