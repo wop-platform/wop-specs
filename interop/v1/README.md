@@ -38,7 +38,7 @@ sdk-spec 附录 G（G1–G3，2026-09-01 立法；以本样本集与参考实现
 **build 样本的 nonce 均已注入**，故流偏移 0 直接是 CEK（`[0:len(CEK)]→CEK`、
 随后 12B→IV、RSA 再取 32B OAEP seed）。字面读成"先跳 16B 再取 CEK"会导致比对失败。
 
-### kind = verify-positive / verify-negative（7 + 16 条）
+### kind = verify-positive / verify-negative（7 + 17 条）
 
 样本是**冻结数据**（响应头 + wire body），消费仓不得重新生成：
 
@@ -55,11 +55,14 @@ sdk-spec 附录 G（G1–G3，2026-09-01 立法；以本样本集与参考实现
 | `decrypt-failed` | 解密类，**模糊** | n01 密文损伤、n05 C1C2C3、n13 DEK 键长 |
 | `digest-mismatch` | 完整性类，明确 | n02、n09（**n09"有 body 缺 digest 头"亦归此类**——D2 把"缺失"与"不匹配"同视为完整性破坏，非结构格式问题） |
 | `alg-mismatch` | 一致性类，明确（D8） | n04 |
-| `protocol` | 解析/协议结构类，明确 | n03/n06/n07/n08/n10/n11/n12/n14/n15 |
+| `protocol` | 解析/协议结构类，明确 | n03/n06/n07/n08/n10/n11/n12/n14/n15/n17 |
 
 **跨域对照**：canonical 五类 ↔ crypto-spec §10.2 网关九类 ↔ sdk-spec §2.2 出向七值的完整映射见 crypto-strategy-spec §10.3。
 
 **已裁决的跨仓分歧**（各仓拉齐基线）：
+
+0. **n17 x-wop-encrypt 为裸 `L2`（缺 `;dek=` 段）**：公开头结构知识 → `protocol`
+   （明确）。此前 php 归解密类模糊，java/python/go 均为协议类——统一以协议类为基线
 
 1. **n06 签名带 `=`**：公开结构知识 → `protocol`（明确），非验签模糊
 2. **n13 DEK 载荷 key 长度错**：载荷结构在解包后才可见，除 alg 族不符（D8 明确）
