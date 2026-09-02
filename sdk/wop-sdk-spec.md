@@ -310,7 +310,7 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 
 ### G3. 一致性锚与漂移拦截
 
-- **字节级合同**：interop/v1 样本集（条数与清单以 `interop-cases.json` 的 `_meta` 为唯一真源；build 方向按 `input` 复现 canonical 与签名；verify 方向
+- **字节级合同**：interop/v1 样本集（条数以 `interop-cases.json` 的 `_meta.caseCount` 为真源，清单以该文件的 `cases` 数组为真源；build 方向按 `input` 复现 canonical 与签名；verify 方向
   消费冻结平台签名），各仓 CI 消费同一字节副本（禁手改、真源在 wop-specs）；
 - **真源优先级**：本附录（wop-specs）> 参考实现 > 样本隐含行为；实现与本附录分歧时以本仓为准
   （治理第 1 条），漂移由 interop CI 拦截；

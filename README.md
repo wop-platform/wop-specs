@@ -89,10 +89,12 @@
    已知引用面：spec 头注状态行、本 README 文档目录「状态」列、条款编号索引表、版本与变更策略节。
    教训来源：D15 留档（PR #10）仅更新索引表，漏目录与策略两处致 README 内部矛盾，由评审评论捕获。
 
-6. **interop 样本集增删联动核查**：样本集增删（`_meta.caseCount` 变更）的 PR，合并前必须以旧计数为模式
-   （30 条例：`grep -rn '29 条' .`）全仓自查，旧引用归零方可合并。引用面纪律：样本条数硬编码仅限本
-   README 文档目录（索引进）与 `interop/v1/` 真源自述（分项计数，随样本集同 PR 变更，非漂移面）；
-   spec 正文指针式引用——条数与清单以 `interop/v1/interop-cases.json` 的 `_meta` 为唯一真源，
-   不镜像样本 id 枚举（2026-09-02 指针化落地）。
+6. **interop 样本集增删联动核查**：样本集增删（`_meta.caseCount` 变更）的 PR，合并前必须以**变更前**
+   的 `_meta.caseCount` 为模式（增删同式：现值 30 条时无论增至 31 还是删至 29，均
+   `grep -rn '30 条' .`）全仓自查，旧引用归零方可合并。引用面纪律：样本条数硬编码仅限本
+   README 文档目录（索引进，总计数）与 `interop/v1/` 真源自述（分项计数）；分项自述须与
+   `cases` 按 kind 派生一致（`jq -r '.cases | group_by(.kind) | map({key: .[0].kind, value: length})' interop/v1/interop-cases.json`），随样本集同 PR 变更，非漂移面；
+   spec 正文指针式引用——条数以 `interop/v1/interop-cases.json` 的 `_meta.caseCount` 为唯一真源，
+   清单以同文件 `cases` 数组为唯一真源，不镜像样本 id 枚举（2026-09-02 指针化落地）。
    教训来源：n17 入集（PR #12）漏三处顶层引用（根 README 计数、sdk-spec §G3 条数、crypto-spec §10.3
    枚举），评审评论兜底而非规则拦截——与规则 5 教训同构（同类第二次）。
