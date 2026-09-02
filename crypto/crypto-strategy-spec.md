@@ -2,7 +2,7 @@
 
 > 版本：v0.4-draft
 > 初始版本日期：2026-08-31
-> 最后更新：2026-09-01
+> 最后更新：2026-09-02
 > 状态：已评审（决策 D1–D15 冻结，见附录 C）
 > 范围：仅描述**目标需求**，不涉及现有实现（绿地需求文档，D1）
 > 配套测试向量：[crypto-vectors.json](crypto-vectors.json)（TEST-ONLY 密钥，跨语言字节级断言基准，附录 B.2 / D9 的载体）
@@ -518,15 +518,17 @@ sequenceDiagram
 
 **（2）interop canonical 五类（SDK 入向，interop/v1 冻结合同）↔ 本表 §10.2**
 
-| canonical class | 触发样本 | §10.2 对应 |
+| canonical class | 触发形态 | §10.2 对应 |
 |---|---|---|
-| `verify-failed`（**模糊**） | 验签层失败、跨端点重放（n16） | 验签类 |
-| `decrypt-failed`（**模糊**） | 密文损伤 / C1C2C3 序 / DEK 键长（n01/n05/n13） | 解密类 |
-| `digest-mismatch`（明确） | digest 缺失或不匹配（n02/n09，D2「缺失」同视为完整性破坏） | 完整性类 |
-| `alg-mismatch`（明确，D8） | dek alg 跨族（n04） | 一致性类 |
-| `protocol`（明确） | 头格式 / 编码 / 信封结构 / 签名段格式 / 缺必签头 / 响应声明套件≠本地配置 / L2 指令缺 dek 段（n03/n06–n12/n14/n15/n17） | 解析类或支持类（视触发点） |
+| `verify-failed`（**模糊**） | 验签层失败、跨端点重放 | 验签类 |
+| `decrypt-failed`（**模糊**） | 密文损伤 / C1C2C3 序 / DEK 键长 | 解密类 |
+| `digest-mismatch`（明确） | digest 缺失或不匹配（D2：「缺失」同视为完整性破坏） | 完整性类 |
+| `alg-mismatch`（明确，D8） | dek alg 跨族 | 一致性类 |
+| `protocol`（明确） | 头格式 / 编码 / 信封结构 / 签名段格式 / 缺必签头 / 响应声明套件≠本地配置 / L2 指令缺 dek 段 | 解析类或支持类（视触发点） |
 
 注：跨族在网关域归「支持类」（校验请求声明的套件合法性），在 SDK 入向域归 `protocol`（n11 裁决：响应声明与本地配置的比对是公开结构知识）——域不同、类目名不同，语义同为「公开结构知识、明确拒绝」。
+
+触发样本的逐条枚举以 `interop/v1`（README 错误分类表 + `interop-cases.json`）为唯一真源，本表不镜像样本清单（治理第 6 条，2026-09-02 指针化）；上注「n11 裁决」等为裁决例证引用，非清单镜像。
 
 **（3）playbook Reason 伪码 ↔ canonical**：P1/P3 `DECRYPT_FAILED`→`decrypt-failed`、P2 `INVALID_ENCRYPTED_BODY`→`protocol`、P4 套件一致性→`protocol`（n11）、P5 `SIGNATURE_FAILED`→`verify-failed`、P6 签名段污染→`protocol`（n06）、P7→ok。playbook 大写伪码是测试断言语义，canonical 小写是 JSON 冻结合同；各仓断言须锚定 canonical 语义，大小写形态随测试惯例。
 
