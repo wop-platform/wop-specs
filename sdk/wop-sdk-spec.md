@@ -4,7 +4,7 @@
 > 日期：2026-08-28
 > 裁决记录：Q1 传输层=协议核心+可插拔 HTTP 适配层（用户裁决）；Q7 TS/PHP 首版仅 RSA 套件、国密列路线图（用户裁决）；Q2–Q6 按草案默认立场通过（已列明无异议）
 > 适用仓库：github.com/wop-platform/wop-{lang}-sdk
-> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——即本文件（wop-specs 仓唯一维护版）；网关仓保留同名工作副本，修订以本仓为准并双向同步
+> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——即本文件（wop-specs 仓唯一维护版）；网关仓不保留工作副本，以指针引用真源，修订仅以本仓为准
 
 ---
 
