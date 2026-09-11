@@ -20,12 +20,14 @@
 
 | 语言 | 适配器交付 |
 |------|-----------|
-| Java | `wop-sdk-core` + `wop-sdk-okhttp`（okhttp provided）+ `wop-sdk-jdkhttp`（java.net.http，零依赖） |
+| Java | `wop-sdk-core` + `wop-sdk-okhttp`（okhttp provided）+ `wop-sdk-jdkhttp`（HttpURLConnection，零依赖）+ `wop-sdk-unirest`（Kong Unirest 4.x，provided，运行时 Java 11+） |
 | Go | `Transport` 接口 + 默认 `http.Client` 实现 + `RoundTripper` 桥接 |
 | TypeScript | fetch 原生适配器 + axios peer 适配器 |
 | Python | stdlib urllib 适配器 + httpx/requests peer 适配器 |
 | PHP | curl 扩展适配器 + Guzzle peer 适配器 |
 | .NET | `HttpClient` 适配器（DelegatingHandler 可插拔） |
+
+> Java 行 2026-09-11 勘误与扩展（附录 H）：jdkhttp 描述修正为 `HttpURLConnection`（原文误记 `java.net.http`，U1）；新增 `wop-sdk-unirest`（U2）。
 
 ### 1.2 套件支持矩阵（Q7 定稿）
 
@@ -61,6 +63,7 @@ WopClient / WopConfig
 
 - 密钥入参：字符串（PEM 或 Base64 单行），SDK 内部解析；RSA=SPKI/PKCS8、SM2=04‖X‖Y/d 标量（D12）
 - 确定性要求：同输入同输出（除 CSPRNG IV/nonce）；`buildRequest` 可重放生成（幂等测试断言）
+- **分步与一站式共存（U3，2026-09-11 增补）**：`buildRequest` / `verifyResponse` / `verifyCallback` 分步 API 为本规格稳定基座，面向自带 HTTP 栈或需全权控制报文与校验时序的商户（§1.1「直接消费 RequestDraft」）；一站式 `execute` 类入口（各语言配置规范承接，Java 见 wop-sdk-config-spec）为分步 API 之上的**组合便利层**——内部仍经 `buildRequest` 产出 RequestDraft、经 `verifyResponse` / `verifyCallback` 执行校验，不取代、不绕过、不另行定义协议语义。两层均为长期公开承诺面。
 
 ### 2.1 出向必传 header 契约（必传集合与入签义务，2026-08-31 增补）
 
@@ -315,3 +318,22 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 - **真源优先级**：本附录（wop-specs）> 参考实现 > 样本隐含行为；实现与本附录分歧时以本仓为准
   （治理第 1 条），漂移由 interop CI 拦截；
 - 新语言接入按本附录实现拼装，禁止以「参考实现即规则」替代条文（自指等价教训见 D6/D7）。
+
+---
+
+## 附录 H：HTTP 适配器勘误与共存增补（2026-09-11，v1.0-ratified 后增补）
+
+> 背景：wop-sdk-config-spec（Java 配置与客户端规范，同仓 `sdk/wop-sdk-config-spec.md`）评审提出三项上游对齐事项（U1–U3），经修订 PR 裁决落地。三项均为描述性勘误、能力扩张与范围声明，零协议行为变更。本附录条款与正文同级生效；§1.1 适配器表与 §2 概念 API 注已同步修正。
+
+### U1. jdkhttp 适配器实现描述勘误
+
+- §1.1 原文「wop-sdk-jdkhttp（java.net.http，零依赖）」与实现不符：wop-java-sdk 根 pom `maven.compiler.release=8`，`java.net.http`（JDK 11+ API）在该基线不可用；实际实现 `JdkHttpTransport` 基于 `HttpURLConnection`（JDK 8 内置）。零依赖结论不变，表内描述已就地修正。
+
+### U2. unirest 适配器入表（能力扩张）
+
+- Java 适配器家族增加第四模块 `wop-sdk-unirest`（Kong Unirest 4.x，provided 作用域；协议核心零第三方运行时依赖的承诺不变）。Unirest 4.x 要求 Java 11+ 运行时，由引入该模块的商户自行承担；§1.1 Java 行已同步入表。
+
+### U3. 一站式入口与分步 API 共存声明
+
+- 分步 API（`buildRequest` / `verifyResponse` / `verifyCallback` + RequestDraft 直消费）是协议核心的公开承诺面；一站式 `execute` 类入口为其上的组合便利层，不取代、不绕过、不另行定义协议语义（正文 §2 注已同步）。
+- 各语言一站式入口的配置加载、传输装配与生命周期细则由各语言配置规范承接（Java：wop-sdk-config-spec）；其裁决不修改本规格正文语义。
