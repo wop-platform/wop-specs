@@ -1,7 +1,7 @@
 # WOP SDK 故障注入测试手册（各语言通用 Playbook）
 
 > 版本：1.0（2026-08-29，源自 wop-java-sdk 实测场景；`FaultInjectionTest` / `OkHttpTransportFaultInjectionTest` / `JdkHttpTransportFaultInjectionTest`）
-> 适用：wop-{go,java,typescript,python,php,dotnet}-sdk 各仓（本手册为组织级真源，各仓消费副本或链接）；协议依据 crypto-strategy-spec v0.4-draft（D2/I7/§10.2）+ sdk-spec F6（校验顺序，sdk/wop-sdk-spec.md §1.3）
+> 适用：wop-{go,java,typescript,python,php,dotnet}-sdk 各仓（本手册为组织级真源，各仓消费副本或链接）；协议依据 crypto-strategy-spec v0.4-draft（D2/I7/§10.2）+ sdk-spec F6（校验顺序，docs/specs/wop-sdk-spec.md §1.3）
 > 纪律：**先写测试看它对未注入的实现通过（绿），再注入故障看它拒绝（红）**——与 TDD 红→绿同构；每条场景必须断言到"错误分类"，不只是"抛异常"
 
 ## 0. 判定基线（每条断言的唯一锚）
