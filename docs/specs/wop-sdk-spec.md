@@ -4,7 +4,7 @@
 > 日期：2026-08-28
 > 裁决记录：Q1 传输层=协议核心+可插拔 HTTP 适配层（用户裁决）；Q7 TS/PHP 首版仅 RSA 套件、国密列路线图（用户裁决）；Q2–Q6 按草案默认立场通过（已列明无异议）
 > 适用仓库：github.com/wop-platform/wop-{lang}-sdk
-> 公开真源：[wop-platform/wop-specs · sdk/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/sdk/wop-sdk-spec.md)——即本文件（wop-specs 仓唯一维护版）；网关仓不保留工作副本，以指针引用真源，修订仅以本仓为准
+> 公开真源：[wop-platform/wop-specs · docs/specs/wop-sdk-spec.md](https://github.com/wop-platform/wop-specs/blob/main/docs/specs/wop-sdk-spec.md)——即本文件（wop-specs 仓唯一维护版）；网关仓不保留工作副本，以指针引用真源，修订仅以本仓为准
 
 ---
 
@@ -323,7 +323,7 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 
 ## 附录 H：HTTP 适配器勘误与共存增补（2026-09-11，v1.0-ratified 后增补）
 
-> 背景：wop-sdk-config-spec（Java 配置与客户端规范，同仓 `sdk/wop-sdk-config-spec.md`）评审提出三项上游对齐事项（U1–U3），经修订 PR 裁决落地。三项均为描述性勘误、能力扩张与范围声明，零协议行为变更。本附录条款与正文同级生效；§1.1 适配器表与 §2 概念 API 注已同步修正。
+> 背景：wop-sdk-config-spec（Java 配置与客户端规范，同仓 `docs/specs/wop-sdk-config-spec.md`）评审提出三项上游对齐事项（U1–U3），经修订 PR 裁决落地。三项均为描述性勘误、能力扩张与范围声明，零协议行为变更。本附录条款与正文同级生效；§1.1 适配器表与 §2 概念 API 注已同步修正。
 
 ### U1. jdkhttp 适配器实现描述勘误
 
