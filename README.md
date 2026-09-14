@@ -75,12 +75,15 @@
 ## 规格治理（2026-08-29 起）
 
 1. **单一来源**：`docs/specs/wop-sdk-spec.md`、`crypto/crypto-strategy-spec.md`、`crypto/crypto-vectors.json`
-   以本仓（wop-specs）为唯一维护版；副本出现分歧时以本仓为准。消费形态分两种（2026-09-03 裁决）：
+   以本仓（wop-specs）为唯一维护版；副本出现分歧时以本仓为准。消费形态（2026-09-03 裁决；2026-09-14 增补第三种）：
    - **spec 文档**（sdk-spec / crypto-spec）：六 SDK 仓内为字节副本；网关仓不保留副本，以指针文件引用真源
-   - **vectors**：各实现仓（含网关）内均为字节副本
+   - **vectors 与 interop 样本集**：各实现仓（含网关）内为字节副本；或采用**钉版拉取引用**——实现仓不保留副本，
+     构建期按本仓 commit SHA 从 raw.githubusercontent.com 拉取，以钉死的 sha256 逐字节校验，不匹配即构建失败
+     （fail-closed；2026-09-14 裁决，首个采用仓：wop-java-sdk）。interop 样本集钉版拉取时 sha256 必须钉
+     冻结字节（与冻结合同哨兵同值），不构成第 4 条例外中的"再生成"或单仓改字节
 2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 的 commit **必须通过 PR 合并进本仓后**，
    各实现仓才能做对应的代码/测试变更（先合 PR、后改码）。
-3. **副本同步**：持有字节副本的仓（六 SDK 仓的 spec 文档 + 各实现仓的 vectors）CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）；网关仓 spec 文档为指针引用，不适用字节比对。
+3. **副本同步**：持有字节副本的仓（六 SDK 仓的 spec 文档 + 各实现仓的 vectors）CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）；网关仓 spec 文档为指针引用，不适用字节比对；钉版拉取仓不持有副本，同样不适用字节比对——其等价且更强的防线是每次构建对拉取内容做 sha256 校验（比对频率从 CI 期提升到每次构建），钉值升级同第 2 条流程（先合本仓 PR、后改实现仓钉值）。
 4. **spec 版本事件联动清单**：任何决策钉死 / 版本 bump / 状态变更合入后，必须逐项核对下列索引面并同 PR（或紧随 PR）刷新（全仓 `grep 'v0\.'` 自查）：
    - 本 README 文档目录表的「版本 / 状态」列；
    - `docs/fault-injection-playbook.md` 头注「协议依据」；
