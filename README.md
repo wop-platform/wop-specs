@@ -81,8 +81,9 @@
      构建期按本仓 commit SHA 从 raw.githubusercontent.com 拉取，以钉死的 sha256 逐字节校验，不匹配即构建失败
      （fail-closed；2026-09-14 裁决，首个采用仓：wop-java-sdk）。interop 样本集钉版拉取时 sha256 必须钉
      冻结字节（与冻结合同哨兵同值），不构成第 4 条例外中的"再生成"或单仓改字节
-2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 的 commit **必须通过 PR 合并进本仓后**，
-   各实现仓才能做对应的代码/测试变更（先合 PR、后改码）。
+2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 或 `interop/v1/interop-cases.json` 的 commit
+   **必须通过 PR 合并进本仓后**，各实现仓才能做对应的代码/测试/钉值变更（先合 PR、后改码；
+   钉版拉取仓同步更新钉死的 commit SHA 与 sha256）。
 3. **副本同步**：持有字节副本的仓（六 SDK 仓的 spec 文档 + 各实现仓的 vectors）CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）；网关仓 spec 文档为指针引用，不适用字节比对；钉版拉取仓不持有副本，同样不适用字节比对——其等价且更强的防线是每次构建对拉取内容做 sha256 校验（比对频率从 CI 期提升到每次构建），钉值升级同第 2 条流程（先合本仓 PR、后改实现仓钉值）。
 4. **spec 版本事件联动清单**：任何决策钉死 / 版本 bump / 状态变更合入后，必须逐项核对下列索引面并同 PR（或紧随 PR）刷新（全仓 `grep 'v0\.'` 自查）：
    - 本 README 文档目录表的「版本 / 状态」列；
