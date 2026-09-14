@@ -1,7 +1,9 @@
 # WOP SDK Interop 样本集 v1（协议编排跨仓一致性合同）
 
-> 真源：本目录（`wop-specs/interop/v1/`）。各 SDK 仓拷贝字节副本进测试 fixture（与
-> `crypto/crypto-vectors.json` 同一纪律：禁手改、CI 与本地消费同一副本）。
+> 真源：本目录（`wop-specs/interop/v1/`）。各 SDK 仓拷贝字节副本进测试 fixture，或采用**钉版拉取引用**
+> （构建期按 wop-specs commit SHA 从 raw.githubusercontent.com 拉取、以钉死的 sha256 逐字节校验，
+> 不保留副本，不匹配即构建失败；2026-09-14 裁决，首个采用仓 wop-java-sdk）——两种形态同一纪律：
+> 禁手改、与真源字节一致、CI 与本地消费同一来源。
 > 生成器：`wop-go-sdk` 的 `interopgen_test.go`（`UPDATE_INTEROP=1 go test -run TestInteropGenerate`），
 > 生成结果确定性（两次生成 sha256 一致）。样本密钥全部 TEST-ONLY，与黄金向量同源。
 > 版本戳纪律：`_meta.specVersion` 随 spec 版本事件由**再生成**刷新（禁手改）；再生成时必须
@@ -86,7 +88,8 @@ sdk-spec 附录 G（G1–G3，2026-09-01 立法；以本样本集与参考实现
 
 ## 消费要求（每仓验收口径）
 
-1. fixture 字节副本进仓（位置随语言惯例），CI 校验与真源 sha256 一致
+1. fixture 字节副本进仓（位置随语言惯例），CI 校验与真源 sha256 一致；或钉版拉取引用
+   （不落副本，构建期按真源 commit SHA 拉取 + 钉死 sha256 逐字节校验，等价且更严——见根 README 规格治理第 1/3 条）
 2. build 方向：`byte-exact` 全量比对；`deterministic-fields` 按 opaque 剥离后比对
 3. verify 方向：positive 断言明文一致；negative 断言错误分类（本仓错误码 →
    canonical class 的映射表须在测试中显式声明）
