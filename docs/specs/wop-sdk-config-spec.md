@@ -128,9 +128,9 @@ return verifyResponse(response, draft)                 # 入向不抛 WopError�
   "suite": "WOP-RSA3072-SHA256",
   "merchantPrivateKey": "YOUR_MERCHANT_PRIVATE_KEY",
   "platformPublicKey": "YOUR_PLATFORM_PUBLIC_KEY",
-  "serverRoot": "https://gw.example.com/gtsp-wop-gateway",
+  "serverRoot": "https://gw.example.com/gateway",
   "backupServerRoots": [
-    "https://gw-backup.example.com/gtsp-wop-gateway"
+    "https://gw-backup.example.com/gateway"
   ],
   "expiredSeconds": 1800,
   "httpClient": {

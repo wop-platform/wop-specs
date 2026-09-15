@@ -120,7 +120,7 @@ WopClient / WopConfig
 ## 4. 仓库与工程约定
 
 - 组织 `wop-platform`，仓库 `wop-<lang>-sdk`，主分支 `main`，MIT License，版本 0.1.0
-- 目录：`src/`（或语言习惯）、`tests/`、`vectors/crypto-vectors.json`（fixture 副本，禁止手改；公开真源：[wop-specs · crypto/crypto-vectors.json](https://github.com/wop-platform/wop-specs/blob/main/crypto/crypto-vectors.json)）
+- 目录：`src/`（或语言习惯）、`tests/`、`vectors/crypto-vectors.json`（fixture 副本，禁止手改；公开真源：[wop-specs · crypto/crypto-vectors.json](https://github.com/wop-platform/wop-specs/blob/main/crypto/crypto-vectors.json)）；或采用钉版拉取——不落副本，构建期按 wop-specs commit SHA 拉取并以钉死的 sha256 校验（2026-09-14 裁决，首个采用仓 wop-java-sdk）
 - `README.md`（**中文默认**）+ `README.en.md`（英文），内容含：快速开始、密钥准备、L0/L2 示例、向量自测、错误处理与模糊化说明
 - CI（GitHub Actions）：测试 + 覆盖率门禁（≥98%）+ 向量合规必须全绿
 - 提交规范沿用 conventional commits（中文 body 允许）
@@ -161,7 +161,8 @@ Q1/Q7 用户裁决，Q2–Q6 默认通过（ratify 无逐条分歧记录，以�
 ### D2. 向量 fixture 同步机制（A1/A2 执行细则）
 
 - 各仓 fixture 是真源（本仓 `crypto/crypto-vectors.json`，wop-specs）的**字节副本**；CI 必须含"真源 vs 本地副本
-  字节比对"步骤，**不一致即 fail**（禁止降级为 warning）。
+  字节比对"步骤，**不一致即 fail**（禁止降级为 warning）。钉版拉取仓不持有副本，不适用字节比对——等价且更强的
+  防线是每次构建对拉取内容做 sha256 校验（fail-closed），钉值升级走真源 PR 先行流程。
 - formatRules 消费**三件套**（缺一即视为未消费）：
   1. 循环全量消费（禁止按 id 点名）；
   2. 未知 id 哨兵（出现未预期条目即失败）；

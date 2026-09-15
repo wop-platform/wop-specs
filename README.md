@@ -75,12 +75,16 @@
 ## 规格治理（2026-08-29 起）
 
 1. **单一来源**：`docs/specs/wop-sdk-spec.md`、`docs/specs/wop-sdk-config-spec.md`、`crypto/crypto-strategy-spec.md`、`crypto/crypto-vectors.json`
-   以本仓（wop-specs）为唯一维护版；副本出现分歧时以本仓为准。消费形态分两种（2026-09-03 裁决）：
+   以本仓（wop-specs）为唯一维护版；副本出现分歧时以本仓为准。消费形态（2026-09-03 裁决；2026-09-14 增补第三种）：
    - **spec 文档**（sdk-spec / config-spec / crypto-spec）：六 SDK 仓内为字节副本；网关仓不保留副本，以指针文件引用真源
-   - **vectors**：各实现仓（含网关）内均为字节副本
-2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 的 commit **必须通过 PR 合并进本仓后**，
-   各实现仓才能做对应的代码/测试变更（先合 PR、后改码）。
-3. **副本同步**：持有字节副本的仓（六 SDK 仓的 spec 文档 + 各实现仓的 vectors）CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）；网关仓 spec 文档为指针引用，不适用字节比对。
+   - **vectors 与 interop 样本集**：各实现仓（含网关）内为字节副本；或采用**钉版拉取引用**——实现仓不保留副本，
+     构建期按本仓 commit SHA 从 raw.githubusercontent.com 拉取，以钉死的 sha256 逐字节校验，不匹配即构建失败
+     （fail-closed；2026-09-14 裁决，首个采用仓：wop-java-sdk）。interop 样本集钉版拉取时 sha256 必须钉
+     冻结字节（与冻结合同哨兵同值），不构成第 4 条例外中的"再生成"或单仓改字节
+2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 或 `interop/v1/interop-cases.json` 的 commit
+   **必须通过 PR 合并进本仓后**，各实现仓才能做对应的代码/测试/钉值变更（先合 PR、后改码；
+   钉版拉取仓同步更新钉死的 commit SHA 与 sha256）。
+3. **副本同步**：持有字节副本的仓（六 SDK 仓的 spec 文档 + 各实现仓的 vectors）CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）；网关仓 spec 文档为指针引用，不适用字节比对；钉版拉取仓不持有副本，同样不适用字节比对——其等价且更强的防线是每次构建对拉取内容做 sha256 校验（比对频率从 CI 期提升到每次构建），钉值升级同第 2 条流程（先合本仓 PR、后改实现仓钉值）。
 4. **spec 版本事件联动清单**：任何决策钉死 / 版本 bump / 状态变更合入后，必须逐项核对下列索引面并同 PR（或紧随 PR）刷新（全仓 `grep 'v0\.'` 自查）：
    - 本 README 文档目录表的「版本 / 状态」列；
    - `docs/fault-injection-playbook.md` 头注「协议依据」；
@@ -103,3 +107,14 @@
    清单以同文件 `cases` 数组为唯一真源，不镜像样本 id 枚举（2026-09-02 指针化落地）。
    教训来源：n17 入集（PR #12）漏三处顶层引用（根 README 计数、sdk-spec §G3 条数、crypto-spec §10.3
    枚举），评审评论兜底而非规则拦截——与规则 5 教训同构（同类第二次）。
+
+---
+
+## 🧩 WOP 生态导航 | Ecosystem
+
+| 类别 | 组件 |
+|------|------|
+| 官方 SDK（六语言） | [Java](https://github.com/wop-platform/wop-java-sdk) · [Go](https://github.com/wop-platform/wop-go-sdk) · [Python](https://github.com/wop-platform/wop-python-sdk) · [PHP](https://github.com/wop-platform/wop-php-sdk) · [.NET](https://github.com/wop-platform/wop-dotnet-sdk) · [TypeScript](https://github.com/wop-platform/wop-typescript-sdk) |
+| 浏览器工作台 | [wop-web-tools](https://github.com/wop-platform/wop-web-tools) —— 密钥生成 · 报文联调 · 国密 · 六语言代码片段 |
+| Agent 技能包 | [wop-skills](https://github.com/wop-platform/wop-skills) —— 零代码调用 · 联调对拍 · 错误码排错 |
+| 平台服务（企业内部） | 统一接入网关 · 核心逻辑服务 · 回调服务 · 开发者门户 · 文档中心 |
