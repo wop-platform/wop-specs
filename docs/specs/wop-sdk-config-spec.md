@@ -99,7 +99,7 @@ Transport（HTTP 适配层，sdk-spec §1.1）
 
 ```
 ctx = RequestContext.resolve(globalConfig, options)    # 内部；含复校验（§6.3）
-draft = buildRequest(method, path, body, level)        # 失败同步抛 WopError（sdk-spec §2.2）
+draft = buildRequest(method, path, body, level, ctx)   # 须消费 ctx 中已解析凭证（含 RequestOptions 覆盖的 appKey/suite/双钥/expiredSeconds）参与签名；失败同步抛 WopError（sdk-spec §2.2）
 response = transport.send(draft, ctx.toTransportCall()) # §7；非 2xx 在此拦截（§7.5）
 return verifyResponse(response, draft)                 # 入向不抛 WopError，返回 VerifyResult
 ```
@@ -159,8 +159,8 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 
 | 字段 | 类型 | 必填 | 默认 | 说明 |
 |------|------|------|------|------|
-| `serverRoot` | string | 是 | — | 主网关根地址，须含 context-path；末尾 `/` 加载时 trim |
-| `backupServerRoots` | string[] | 否 | `[]` | 备用网关根地址，**有序，仅排在主网关之后**；仅全局，不可请求级覆盖 |
+| `serverRoot` | string | 是 | — | 主网关根地址，须为 **HTTPS 绝对 URL** 且含 context-path；末尾 `/` 加载时 trim（K20） |
+| `backupServerRoots` | string[] | 否 | `[]` | 备用网关根地址，每项须为 **HTTPS 绝对 URL**；**有序，仅排在主网关之后**；仅全局，不可请求级覆盖 |
 
 > 字段名 `backupServerRoots`（K7）：语义为「主网关失败后依序尝试的备用」。
 
@@ -182,6 +182,7 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | 重复键 / 类型不符 / 数字越界 | `配置字段 expiredSeconds 类型非法: ...` |
 | 缺少必填字段 | `配置文件缺少必填项: appKey` |
 | `serverRoot` 非法 URL | `serverRoot 不是合法 URL: ...` |
+| `serverRoot` / `backupServerRoots` 非 HTTPS | `serverRoot 须为 HTTPS 绝对 URL: ...`（`http://` 拒绝，K20） |
 | `suite` 无法识别 | `不支持的算法套件: ...` |
 | 密钥格式/长度非法 | `密钥解析失败: ...` |
 | `expiredSeconds` ≤ 0 | `expiredSeconds 须为正整数` |
@@ -239,6 +240,7 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 - 支持类型：对象、字符串、数字（long/int 范围）、布尔、null、字符串数组、**一层**嵌套对象（`httpClient`）；更深嵌套 → configuration 错误；
 - 字符串完整 RFC 8259 转义集（含 `\uXXXX`），字符串内容中的 `}` `]` `,` 不参与边界判定（sdk-spec 附录 D3 纪律）；
 - 未知字段忽略；重复键、类型不符、数字越界 → configuration 错误（消息含字段名）；
+- **重复键检测（K21）**：标准库 `JSON.parse` / `encoding/json` / `json.loads` 等会在对象解析时静默覆盖重复键——**禁止**直接依赖其对象解析结果作为最终配置。各语言须使用能够检测重复键的扫描器或解析器（或解析后单独校验键唯一性），重复 `appKey`、`serverRoot` 等须 fail-fast；
 - **运行时依赖纪律**：配置 schema 为 ~10 个扁平字段，各语言须使用**标准库或内置极简解析器**，禁止为配置层引入重量级 JSON 绑定库（各语言具体约束见附录）。
 
 ---
@@ -284,7 +286,7 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 
 ### 6.3 resolve 复校验（fail-fast）
 
-合并后必须重新执行 §3.4 等价校验——suite 解析、双钥解析与套件族交叉校验、serverRoot URL 合法性。失败同步抛 `WopError.configuration`。
+合并后必须重新执行 §3.4 等价校验——suite 解析、双钥解析与套件族交叉校验、`serverRoot` HTTPS 绝对 URL 合法性（K20）。失败同步抛 `WopError.configuration`。
 
 ### 6.4 性能
 
@@ -332,7 +334,10 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | 不可重试 | 读超时（body 已发出，重复提交风险）、任何 HTTP 状态码、协议类 `WopError`、其他 SDK 异常 |
 | 上限 | `min(maxRetryCount, 候选数 - 1)` |
 
-全部候选失败 → SDK 异常（`全部网关地址不可用（已尝试 N 个）`，cause = 最后一次异常）。
+Failover 耗尽 → SDK 异常（cause = 最后一次异常），消息须区分两种情形（K22）：
+
+- **全部候选已尝试**：`全部网关地址不可用（已尝试 N 个）`（N = 候选数）；
+- **因 `maxRetryCount` 达到上限而停止**（仍有未尝试候选）：`网关地址不可用（已尝试 N 个，已达重试上限 M）`（N = 实际尝试数，M = `maxRetryCount`）。
 
 ### 7.4 方法与重定向（〔通用〕原则）
 
@@ -350,12 +355,17 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 
 流式读取上限 **11MB**（`11 << 20` 字节，sdk-spec 附录 D4）：读取过程中逐块计数、超限即断流。任何传输实现必须同构。
 
-### 7.7 path 语法（K14）
+### 7.7 path 语法与 URL 拼接（K14）
 
-`execute` / `buildRequest` 的 `path` 必须是 `/` 开头的**纯 API 路径**（如 `/gateway/order/create`），相对 `serverRoot` / `TransportCall.serverRoot` 解析；**不含 scheme 与域名**，亦不得携带 query / fragment。以下任一情形即 `WopError.configuration` fail-fast：
+`execute` / `buildRequest` 的 `path` 必须是**纯 API 路径**（如 `/gateway/order/create`），相对 `serverRoot` / `TransportCall.serverRoot` 解析；**不含 scheme 与域名**，亦不得携带 query / fragment。以下任一情形即 `WopError.configuration` fail-fast：
 
+- 不以 `/` 开头，或以 `//` 开头（network-path reference，如 `//attacker.example/path`）；
 - 含 `?` 或 `#`（sdk-spec 附录 G1：canonicalQueryString 恒空）；
-- 含 scheme / 域名（绝对 URL，或任何非 `/` 开头形式）。
+- 含 scheme / 域名（绝对 URL）。
+
+**URL 拼接规则（K23）**：最终请求 URL = `trimTrailingSlash(serverRoot) + "/" + trimLeadingSlash(path)`——去除 `serverRoot` 尾部 `/` 与 `path` 首部 `/` 后，以单个 `/` 连接；**不得替换 URL authority**，须保留 `serverRoot` 中的 context-path（如 `/gtsp-wop-gateway`）。
+
+示例：`serverRoot = "https://gw.example.com/gtsp-wop-gateway/"` + `path = "/gateway/order/create"` → `https://gw.example.com/gtsp-wop-gateway/gateway/order/create`。
 
 ---
 
@@ -376,6 +386,7 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | 要求 | 说明 |
 |------|------|
 | 密钥不落日志 | `Config.toString` 打码；异常、debug 日志同纪律（K16） |
+| 网关 HTTPS | `serverRoot` / `backupServerRoots` / 请求级 `serverRoot` 须为 HTTPS 绝对 URL（K20）；`http://` 在加载与 resolve 复校验阶段拒绝 |
 | 文件部署 | 正式配置外置（K6），生产建议 restrictive 文件权限；不得提交版本库 |
 | 回调时间窗 | 签名覆盖 `x-wop-timestamp`，**新鲜度校验不在 SDK 职责**（K10），由商户业务层判定 |
 
@@ -403,12 +414,13 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | # | 验收项 | 判定 |
 |---|--------|------|
 | C1 | 配置发现顺序 | §4.2 六来源 + 显式不可读即报错 + 全未命中错误消息 |
-| C2 | 加载校验 | §3.4 全表 + 重复键 / BOM / 空文件 |
-| C3 | execute 组合链 | 签名 → 发送 → 非 2xx 拦截 → 验签，复用分步 API 不另定义协议 |
+| C2 | 加载校验 | §3.4 全表 + 重复键（含重复 `appKey` / `serverRoot`）/ BOM / 空文件 / HTTPS |
+| C3 | execute 组合链 | 签名 → 发送 → 非 2xx 拦截 → 验签；请求级凭证覆盖须反映于签名头 |
 | C4 | 请求级覆盖 | §6 合并 / 复校验 / K3 Failover 关闭 |
-| C5 | path 语法 | §7.7 纯 API 路径拒绝规则 |
+| C5 | path 语法与 URL 拼接 | §7.7 拒绝 `//` / 绝对 URL / query；拼接保留 context-path |
 | C6 | 密钥不打日志 | toString / 异常 / debug 打码（K16） |
 | C7 | Gherkin（sdk-spec E3） | 配置加载、execute L0/L2、回调验签场景 ≥10；平台响应构造遵守 D5 |
+| C8 | Failover 错误消息 | §7.3 K22：全部候选 vs 重试上限两种消息 |
 
 ---
 
@@ -435,6 +447,10 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | K17 | 不引入独立门面类；协议客户端类即一站式入口 | 减少重叠公开面 |
 | K18 | 传输发现 P0 须可无环装配默认传输；多实现选择规则各语言附录钉死 | 如 Java ServiceLoader SPI |
 | K19 | v0.3 扩展六语言统一规格；Java v0.2 正文迁入附录 A，通用 JSON/语义层上浮正文 | 与 wop-sdk-spec 治理对齐 |
+| K20 | 网关地址须 HTTPS 绝对 URL | 防明文传输签名头与 L0 请求体（CWE-319） |
+| K21 | 重复键须解析阶段检测，禁止依赖静默覆盖的标准库对象解析 | §4.4 与 C2 可执行 |
+| K22 | Failover 错误消息区分「全部候选已尝试」与「达重试上限」 | 避免排障误导 |
+| K23 | path 拒绝 `//` 开头；URL 拼接 trim 后单斜杠连接、保留 context-path | 跨 SDK 请求地址一致 |
 
 ---
 
@@ -468,7 +484,7 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 
 商户 `pom` 引入 `wop-sdk-core` + 传输模块之一（通常 `wop-sdk-jdkhttp`）。
 
-**K8（Java）**：配置解析使用 core 内置极简 JSON 读取器（§4.4），不引入 jackson-databind 运行时依赖。
+**K8（Java）**：配置解析使用 core 内置极简 JSON 读取器（§4.4，含重复键检测 K21），不引入 jackson-databind 运行时依赖。
 
 ### A.3 传输 SPI（K18）
 
@@ -590,8 +606,9 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 6. Failover pre-send 可重试 / 读超时不重试
 7. jdkhttp PATCH 拒绝；三适配器均不跟随重定向
 8. K16 toString 打码回归
-9. path 语法 §7.7
-10. Gherkin ≥10 场景（sdk-spec E3）
+9. path 语法 §7.7（含 `//` 拒绝与 URL 拼接）
+10. 重复键（`appKey` / `serverRoot`）配置错误；HTTPS 校验；请求级凭证覆盖签名头
+11. Gherkin ≥10 场景（sdk-spec E3）
 
 ---
 
@@ -604,10 +621,10 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 | 客户端 | `wop.Client`；`wop.DefaultClient()` / `wop.NewFromConfig(cfg)` / `wop.ResetDefault()` |
 | 配置路径覆盖 | 环境变量 `WOP_SDK_CONFIG_FILE`（优先级 1）；`WOP_SDK_CONFIG`（优先级 2） |
 | 传输发现 | 默认 `http.DefaultClient` 包装；`WOP_TRANSPORT=http` 显式；商户 `RoundTripper` 注入 |
-| JSON 解析 | 标准库 `encoding/json` + 结构体 tag；未知字段 `json:"-"` 或 Decoder `DisallowUnknownFields` 按 K8 取舍——**须忽略未知字段** |
+| JSON 解析 | 标准库 `encoding/json` + 结构体 tag；**默认忽略未知字段**（禁止 `DisallowUnknownFields`）；单独检测重复键、类型错误和数值越界（K21） |
 | 并发 | `sync.Once` 保护 `DefaultClient()` |
 | 网关响应异常 | `*wop.GatewayResponseError`（`StatusCode` / `Body`） |
-| Failover | P2；连接失败可重试判别同 K4（`net.Error` Timeout + `Temporary` 语义） |
+| Failover | P2；传输实现须显式记录请求阶段，仅确认请求尚未发送且发生连接阶段失败时允许重试（K4，禁止依赖 `net.Error.Timeout()`/`Temporary()` 判别阶段） |
 
 ---
 
@@ -619,9 +636,9 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 | ConfigLoader | `loadDefault()` / `load(location)` / `clearCache()` |
 | 客户端 | `WopClient.defaultClient()` / `fromConfig()` / `resetDefault()` |
 | 配置路径覆盖 | `process.env.WOP_SDK_CONFIG_FILE`；`WOP_SDK_CONFIG` |
-| 传输发现 | 默认 fetch；多适配器时 env `WOP_TRANSPORT=fetch|axios` 或构造注入 |
-| JSON 解析 | `JSON.parse` + 运行时类型校验（zod 等**禁止**进运行时依赖面，手写校验） |
-| 并发 | 模块级 Promise 锁或 `AsyncLocalStorage` 等价，首调单实例 |
+| 传输发现 | 默认 fetch；多适配器时 env `WOP_TRANSPORT=fetch\|axios` 或构造注入 |
+| JSON 解析 | 使用能够检测重复键的扫描器或解析器（K21）；再进行运行时类型校验（zod 等**禁止**进运行时依赖面，手写校验） |
+| 并发 | 同步模块级缓存/初始化机制，保证 `defaultClient()` 首调单实例（K15） |
 | 网关响应异常 | `WopGatewayResponseError` |
 
 ---
@@ -634,8 +651,8 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 | ConfigLoader | `wop.config.load_default()` / `load()` / `clear_cache()` |
 | 客户端 | `WopClient.default_client()` / `from_config()` / `reset_default()` |
 | 配置路径覆盖 | `os.environ["WOP_SDK_CONFIG_FILE"]`；`WOP_SDK_CONFIG` |
-| 传输发现 | 默认 urllib；`WOP_TRANSPORT=urllib|httpx|requests` 或构造注入 |
-| JSON 解析 | 标准库 `json` |
+| 传输发现 | 默认 urllib；`WOP_TRANSPORT=urllib\|httpx\|requests` 或构造注入 |
+| JSON 解析 | 标准库 `json` + 重复键检测（K21；`json.loads` 静默覆盖重复键，须补充校验） |
 | 并发 | `threading.Lock` 保护 `default_client()` |
 | 网关响应异常 | `WopGatewayResponseError` |
 
@@ -650,7 +667,7 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 | 客户端 | `WopClient::defaultClient()` / `fromConfig()` / `resetDefault()` |
 | 配置路径覆盖 | `getenv('WOP_SDK_CONFIG_FILE')`；`WOP_SDK_CONFIG` |
 | 传输发现 | 默认 curl；构造注入 Guzzle `Client` |
-| JSON 解析 | `json_decode` + 手写校验（禁止 Symfony Serializer 等重量级依赖进 core） |
+| JSON 解析 | `json_decode` + 重复键检测（K21）+ 手写校验（禁止 Symfony Serializer 等重量级依赖进 core） |
 | 网关响应异常 | `WopGatewayResponseException` |
 
 ---
@@ -664,7 +681,7 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 | 客户端 | `WopClient.DefaultClient` / `FromConfig()` / `ResetDefault()` |
 | 配置路径覆盖 | 环境变量 `WOP_SDK_CONFIG_FILE`；`WOP_SDK_CONFIG`；可选 `appsettings.json` 节 `WopSdk`（文档示例，非必须） |
 | 传输发现 | 默认 `HttpClient`；`WOP_TRANSPORT` 或 DI 注入 |
-| JSON 解析 | `System.Text.Json`（`JsonSerializer.Deserialize` + 手写校验） |
+| JSON 解析 | `System.Text.Json` + 重复键检测（K21）+ 手写校验 |
 | 并发 | `Lazy<WopClient>` 或 `SemaphoreSlim` |
 | 网关响应异常 | `WopGatewayResponseException` |
 | HttpClient | `AllowAutoRedirect = false`；响应体流式 11MB 限额 |
