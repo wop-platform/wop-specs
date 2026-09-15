@@ -213,7 +213,8 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | 缺少必填字段 | `配置文件缺少必填项: appKey` |
 | `serverRoot` 非法 URL | `serverRoot 不是合法 URL: ...` |
 | `serverRoot` scheme 非 HTTPS | `serverRoot 须为 HTTPS 绝对 URL: ...`（K20） |
-| `serverRoot` / `backupServerRoots[i]` 含 query / fragment | `serverRoot 不得含 query 或 fragment: ...`（网关根地址须为纯 origin + path） |
+| `serverRoot` 含 query / fragment | `serverRoot 不得含 query 或 fragment: ...`（网关根地址须为纯 origin + path） |
+| `backupServerRoots[i]` 含 query / fragment | `backupServerRoots[1] 不得含 query 或 fragment: ...`（**逐项**，索引与 JSON 字段名一致） |
 | `backupServerRoots[i]` 非法 URL | `backupServerRoots[2] 不是合法 URL: ...`（**逐项**校验，含索引） |
 | `backupServerRoots[i]` scheme 非 HTTPS | `backupServerRoots[1] 须为 HTTPS 绝对 URL: ...`（K20，**逐项**） |
 | `suite` 无法识别 | `不支持的算法套件: ...` |
@@ -296,10 +297,10 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 |----------|------|
 | `defaultClient()` | 惰性：`loadDefault` → 传输发现 → 构造；缓存复用同一实例 |
 | `fromConfig(config)` | 显式配置构造（不进默认实例缓存） |
-| `resetDefault()` | 丢弃默认实例缓存；配合 `clearCache()` 做轮换编排 |
+| `resetDefault()` | 丢弃默认实例与初始化状态；**须先** `clearCache()` 再调用（K26） |
 
 - **并发安全（K15）**：`defaultClient()` 惰性初始化须同步，并发首调仅创建一个实例。
-- **重置协议（K26）**：`resetDefault()` 须**原子**丢弃默认实例并重置初始化状态，使下一次 `defaultClient()` 完整重走 `loadDefault` → 传输发现 → 构造。使用 `sync.Once` / `Lazy<T>` 等单次初始化原语的语言，Reset 须采用「指针包裹 Once + Reset 时替换」或 mutex 全路径保护等等价方案——**禁止** Reset 后仍返回旧实例。须含 `clearCache()` + `resetDefault()` 后并发 `defaultClient()` 加载新配置的回归测试。
+- **重置协议（K26）**：密钥轮换须 **先** `clearCache()` **再** `resetDefault()`——Reset **仅**原子丢弃默认实例并重置初始化状态，**不在 Reset 内加载新配置**；**下一次** `defaultClient()` 才完整重走 `loadDefault` → 传输发现 → 构造。使用 `sync.Once` / `Lazy<T>` 等单次初始化原语的语言，Reset 须采用「指针包裹 Once + Reset 时替换」或 mutex 全路径保护等等价方案——**禁止** Reset 后仍返回旧实例。须含 `clearCache()` → `resetDefault()` 后并发 `defaultClient()` 加载新配置的回归测试。
 - 密钥轮换：无自动热更新——`clearCache()` + `resetDefault()` + 外部编排，或进程重启（K13）。
 
 ---
@@ -484,7 +485,7 @@ finalUrl = trimTrailingSlash(serverRoot) + "/" + trimLeadingSlash(path)
 |---|--------|------|
 | C1 | 配置发现顺序 | §4.2 六来源 + 显式不可读即报错 + 全未命中错误消息 |
 | C2 | 加载校验 | §3.4 全表 + 重复键（含重复 `appKey` / `serverRoot`）/ BOM / 空文件 / HTTPS |
-| C3 | execute 组合链 | 签名 → 发送 → 非 2xx 拦截 → 验签；请求级凭证覆盖须反映于签名头 |
+| C3 | execute 组合链 | 签名 → 发送 → 非 2xx 拦截 → 验签；**出向**请求级凭证覆盖须反映于签名头（入向字段见 C4） |
 | C4 | 请求级覆盖 | §6 合并 / 复校验 / K3 Failover 关闭；§2.2 方向性凭证视图（出/入向字段分别断言） |
 | C5 | path 语法与 URL 拼接 | §7.7 拒绝 `//` / 绝对 URL / query；拼接保留 context-path |
 | C6 | 密钥不打日志 | toString / 异常 / debug 打码（K16） |
@@ -492,7 +493,7 @@ finalUrl = trimTrailingSlash(serverRoot) + "/" + trimLeadingSlash(path)
 | C8 | Failover 错误消息 | §7.3 K22：全部候选 vs 重试上限两种消息 |
 | C9 | 重定向关闭 | §7.4.1 各语言默认适配器须配置不跟随 |
 | C10 | 程序化配置 | §2.1 K11：Builder/fromConfig 与 JSON 校验等价 |
-| C11 | 配置轮换重置 | §5 K26：`clearCache()` + `resetDefault()` 后并发 `defaultClient()` 加载新配置 |
+| C11 | 配置轮换重置 | §5 K26：`clearCache()` → `resetDefault()` 后并发 `defaultClient()` 懒加载新配置 |
 
 ---
 
@@ -703,7 +704,7 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 | 传输发现 | 默认 `http.DefaultClient` 包装；`WOP_TRANSPORT=http` 显式；商户 `RoundTripper` 注入 |
 | 程序化配置 | `NewFromConfig(cfg)` / Builder 构造（§2.1 K11），校验与 JSON 路径等价 |
 | JSON 解析 | 标准库 `encoding/json`（默认行为即 K8「忽略未知字段」；**勿用** `json:"-"` / `DisallowUnknownFields`，二者语义相反）；重复键以 `json.Decoder` + `Token()` 预扫报错（§4.4） |
-| 并发 / 重置 | `sync.Once` 保护 `DefaultClient()`；`ResetDefault()` 须替换 Once 容器或 mutex 全路径重置（§5 K26），Reset 后下次 `DefaultClient()` 加载新配置 |
+| 并发 / 重置 | `sync.Once` 保护 `DefaultClient()`；轮换须先 `config.ClearCache()` 再 `ResetDefault()`——Reset 仅丢弃默认实例与初始化状态，**不在 Reset 内加载**；下次 `DefaultClient()` 懒加载新配置（§5 K26；Once 容器须可替换或 mutex 全路径重置） |
 | 重定向 | `http.Client.CheckRedirect → http.ErrUseLastResponse`（§7.4.1） |
 | 网关响应异常 | `*wop.GatewayResponseError`（`StatusCode` / `Body`） |
 | Failover | P2；`httptrace.ClientTrace` 标记请求阶段，**仅请求体未写出**且连接阶段失败可重试（K4；禁止 `net.Error.Timeout()`/`Temporary()`） |
@@ -739,7 +740,7 @@ Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }
 | 传输发现 | 默认 urllib；`WOP_TRANSPORT=urllib\|httpx\|requests` 或构造注入 |
 | JSON 解析 | 标准库 `json`：`loads(..., object_pairs_hook=…)` 重复键报错、`parse_constant` 拒 NaN/Infinity（§4.4） |
 | 程序化配置 | `from_config()` / Builder 构造（§2.1 K11） |
-| 并发 / 重置 | `threading.Lock` 保护 `default_client()`；`reset_default()` 须释放并重载（K26） |
+| 并发 / 重置 | `threading.Lock` 保护 `default_client()`；轮换须先 `clear_cache()` 再 `reset_default()`——Reset 仅丢弃默认实例与初始化状态，**不在 Reset 内加载**；下次 `default_client()` 懒加载新配置（K26） |
 | 重定向 | urllib：禁用 `HTTPRedirectHandler`；httpx/requests：`allow_redirects=False`（§7.4.1） |
 | 网关响应异常 | `WopGatewayResponseError` |
 
