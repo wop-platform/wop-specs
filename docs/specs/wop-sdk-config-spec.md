@@ -109,6 +109,17 @@ return verifyResponse(response, draft, overrides=ctx.inbound())
 
 - **凭证接线（K24）**：`RequestContext.resolve` 须构造**方向分离**的已解析凭证视图（§2.2），禁止将同一组字段无条件传入出/入两条链路。分步 API 直调 `buildRequest(...)` 时不传 `overrides`（= 使用客户端全局配置），与 sdk-spec §2 基线一致。
 
+### 2.1 程序化配置（K11，〔通用〕）
+
+除 JSON 文件外，各语言须支持**程序化构造**与 JSON 路径等价的 `Config` 快照，并执行相同 §3.4 校验：
+
+| 构造方式 | 说明 |
+|----------|------|
+| `fromConfig(config)` / `Builder` + `build()` | 代码显式赋值全部字段（含 `serverRoot`、双钥、`httpClient`） |
+| 可选 `transport` 注入 | 缺省时走 §7.2 传输发现；注入则跳过 SPI/默认发现 |
+
+程序化路径与 JSON 加载路径**校验等价、语义等价**——不得因来源不同而放宽 HTTPS、重复键或密钥格式要求。
+
 ### 2.2 方向性凭证视图（K25，〔通用〕）
 
 `RequestOptions` 可覆盖的字段在 **resolve 后**按协议职责拆为出向/入向视图（crypto-spec D14/D15）：
@@ -121,21 +132,9 @@ return verifyResponse(response, draft, overrides=ctx.inbound())
 | `platformPublicKey` | ❌ | ✅ 响应/回调验签 | 出向不使用 |
 | `expiredSeconds` | ✅ 出向签名窗口 | ❌ | 新鲜度校验归属商户业务层（K10） |
 
-- `verifyCallback(..., options)`：入向视图 + 多 appKey 时以 options 中的 `platformPublicKey`（及关联 `suite`/密钥族）选择验签材料；**仍不适用** options 的 `appKey` 作为 SM2 ZA userId（D15 不变）。
+- `verifyCallback(..., options)`：入向视图 + 多 appKey 时以 options 中的 `platformPublicKey`（及关联 `suite`/密钥族）选择验签材料；**仍不适用** options 的 `appKey` 作为 SM2 ZA userId（D15 不变）；凭证覆盖重载仅消费 options 中凭证字段，超时与域名字段忽略（K10）。
 - **C4 验收**：须分别断言——出向覆盖 `appKey`/`expiredSeconds` 反映于签名头；入向覆盖 `platformPublicKey`/`suite` 反映于验签路径；入向**不得**因 options.appKey 改变 SM2 ZA userId。
 - 未配置传输时 `execute` 抛 `WopError.configuration`；分步 API 不受影响。
-- `verifyCallback(..., options)` 凭证覆盖重载仅消费 options 中凭证字段，超时与域名字段忽略（K10）。
-
-### 2.1 程序化配置（K11，〔通用〕）
-
-除 JSON 文件外，各语言须支持**程序化构造**与 JSON 路径等价的 `Config` 快照，并执行相同 §3.4 校验：
-
-| 构造方式 | 说明 |
-|----------|------|
-| `fromConfig(config)` / `Builder` + `build()` | 代码显式赋值全部字段（含 `serverRoot`、双钥、`httpClient`） |
-| 可选 `transport` 注入 | 缺省时走 §7.2 传输发现；注入则跳过 SPI/默认发现 |
-
-程序化路径与 JSON 加载路径**校验等价、语义等价**——不得因来源不同而放宽 HTTPS、重复键或密钥格式要求。
 
 ---
 
