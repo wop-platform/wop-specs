@@ -63,7 +63,7 @@ WopClient / WopConfig
 
 - 密钥入参：字符串（PEM 或 Base64 单行），SDK 内部解析；RSA=SPKI/PKCS8、SM2=04‖X‖Y/d 标量（D12）
 - 确定性要求：同输入同输出（除 CSPRNG IV/nonce）；`buildRequest` 可重放生成（幂等测试断言）
-- **分步与一站式共存（U3，2026-09-11 增补）**：`buildRequest` / `verifyResponse` / `verifyCallback` 分步 API 为本规格稳定基座，面向自带 HTTP 栈或需全权控制报文与校验时序的商户（§1.1「直接消费 RequestDraft」）；一站式 `execute` 类入口（各语言配置规范承接，Java 见 wop-sdk-config-spec）为分步 API 之上的**组合便利层**——内部仍经 `buildRequest` 产出 RequestDraft、经 `verifyResponse` / `verifyCallback` 执行校验，不取代、不绕过、不另行定义协议语义。两层均为长期公开承诺面。
+- **分步与一站式共存（U3，2026-09-11 增补）**：`buildRequest` / `verifyResponse` / `verifyCallback` 分步 API 为本规格稳定基座，面向自带 HTTP 栈或需全权控制报文与校验时序的商户（§1.1「直接消费 RequestDraft」）；一站式 `execute` 类入口（[wop-sdk-config-spec](./wop-sdk-config-spec.md) 承接各语言配置层）为分步 API 之上的**组合便利层**——内部仍经 `buildRequest` 产出 RequestDraft、经 `verifyResponse` / `verifyCallback` 执行校验，不取代、不绕过、不另行定义协议语义。两层均为长期公开承诺面。
 
 ### 2.1 出向必传 header 契约（必传集合与入签义务，2026-08-31 增补）
 
@@ -323,7 +323,7 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 
 ## 附录 H：HTTP 适配器勘误与共存增补（2026-09-11，v1.0-ratified 后增补）
 
-> 背景：wop-sdk-config-spec（Java 配置与客户端规范，同仓 `docs/specs/wop-sdk-config-spec.md`）评审提出三项上游对齐事项（U1–U3），经修订 PR 裁决落地。三项均为描述性勘误、能力扩张与范围声明，零协议行为变更。本附录条款与正文同级生效；§1.1 适配器表与 §2 概念 API 注已同步修正。
+> 背景：wop-sdk-config-spec（各语言 SDK 配置与客户端规范，同仓 `docs/specs/wop-sdk-config-spec.md`）评审提出三项上游对齐事项（U1–U3），经修订 PR 裁决落地。三项均为描述性勘误、能力扩张与范围声明，零协议行为变更。本附录条款与正文同级生效；§1.1 适配器表与 §2 概念 API 注已同步修正。
 
 ### U1. jdkhttp 适配器实现描述勘误
 
@@ -336,4 +336,4 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 ### U3. 一站式入口与分步 API 共存声明
 
 - 分步 API（`buildRequest` / `verifyResponse` / `verifyCallback` + RequestDraft 直消费）是协议核心的公开承诺面；一站式 `execute` 类入口为其上的组合便利层，不取代、不绕过、不另行定义协议语义（正文 §2 注已同步）。
-- 各语言一站式入口的配置加载、传输装配与生命周期细则由各语言配置规范承接（Java：wop-sdk-config-spec）；其裁决不修改本规格正文语义。
+- 各语言一站式入口的配置加载、传输装配与生命周期细则由 [wop-sdk-config-spec](./wop-sdk-config-spec.md) 承接（§10 概览 + 附录 A–F 各语言绑定）；其裁决不修改本规格正文语义。
