@@ -9,7 +9,7 @@
 |------|------|------|------|
 | [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 已评审冻结（D1–D15，2026-09-01） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
 | [docs/specs/wop-sdk-spec.md](docs/specs/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F9、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、附录 G canonicalRequest 拼装规则（G1–G3）、附录 H 适配器勘误与共存增补（U1–U3）、验收标准 A1–A7 |
-| [docs/specs/wop-sdk-config-spec.md](docs/specs/wop-sdk-config-spec.md) | v0.2-draft | 已评审（K1–K18，2026-09-11） | Java 绑定配置与客户端规范（目标态）：JSON 配置加载与发现顺序、`WopClient` 一站式入口（K17）、`execute` 组合契约、`TransportFactory` SPI 发现（K18）、path 纯 API 路径（K14）、Failover 语义（K3/K4）、实现差距台账（P0/P1/P2） |
+| [docs/specs/wop-sdk-config-spec.md](docs/specs/wop-sdk-config-spec.md) | v0.3-draft | 已评审（K1–K26，2026-09-15） | 各语言 SDK 配置与客户端规范（目标态）：方向性凭证视图（config-spec K25，crypto-spec D14/D15）、resetDefault 并发重置（config-spec K26）、HTTPS 与 query·fragment 校验（K20）、六语言重复键路径（K21）、重定向矩阵（§7.4.1）、附录 A–F 语言细则 |
 | [crypto/crypto-vectors.json](crypto/crypto-vectors.json) | 2026-08-28 | 稳定 | 黄金测试向量（TEST-ONLY 密钥）：跨语言**字节级**断言基准，防实现漂移的验收载体（D9） |
 | [interop/v1/](interop/v1/) | wop-interop-1 | 冻结 | 协议编排互操作样本集（30 条：6 build + 7 positive + 17 negative）：canonicalRequest、signedHeaders、L2 信封与 canonical 错误分类的跨仓一致性合同 |
 | [docs/fault-injection-playbook.md](docs/fault-injection-playbook.md) | 1.0 | 稳定 | 故障注入测试手册：协议层 P1–P7 + 网络层 N1–N6 注入矩阵，I7 明确/模糊分界的测试锚 |
@@ -58,13 +58,13 @@
 | sdk-spec E1–E3 | 跨语言质量任务契约 | wop-sdk-spec 附录 E |
 | sdk-spec G1–G3 | canonicalRequest 拼装规则 | wop-sdk-spec 附录 G |
 | sdk-spec U1–U3 | Java 适配器勘误与共存增补 | wop-sdk-spec 附录 H |
-| config-spec K1–K18 | Java 配置层裁决记录 | wop-sdk-config-spec §14 |
+| config-spec K1–K26 | SDK 配置层裁决记录 | wop-sdk-config-spec §12 |
 | sdk-spec A1–A7 | 每仓验收标准 | wop-sdk-spec §5 |
 | playbook P1–P7 / N1–N6 | 故障注入场景 | fault-injection-playbook §1/§2 |
 
 ## 📐 版本与变更策略
 
-- spec 采用**冻结版本 + 决策记录**制：每条关键裁决有唯一编号（协议 D1–D15、SDK Q1–Q7、配置 K1–K18），正文与决策记录同步演进，不悄悄改
+- spec 采用**冻结版本 + 决策记录**制：每条关键裁决有唯一编号（协议 D1–D15、SDK Q1–Q7、配置 K1–K26），正文与决策记录同步演进，不悄悄改
 - 黄金向量变更 = 破坏性变更：须 bump 向量版本并同步六个 SDK 仓 fixture，CI 全红即拦截漂移
 - 本仓库不含任何内部实现细节；网关实现侧文档不在公开范围
 
@@ -74,9 +74,9 @@
 
 ## 规格治理（2026-08-29 起）
 
-1. **单一来源**：`docs/specs/wop-sdk-spec.md`、`crypto/crypto-strategy-spec.md`、`crypto/crypto-vectors.json`
+1. **单一来源**：`docs/specs/wop-sdk-spec.md`、`docs/specs/wop-sdk-config-spec.md`、`crypto/crypto-strategy-spec.md`、`crypto/crypto-vectors.json`、`interop/v1/interop-cases.json`
    以本仓（wop-specs）为唯一维护版；副本出现分歧时以本仓为准。消费形态（2026-09-03 裁决；2026-09-14 增补第三种）：
-   - **spec 文档**（sdk-spec / crypto-spec）：六 SDK 仓内为字节副本；网关仓不保留副本，以指针文件引用真源
+   - **spec 文档**（sdk-spec / config-spec / crypto-spec）：六 SDK 仓内为字节副本；网关仓不保留副本，以指针文件引用真源
    - **vectors 与 interop 样本集**：各实现仓（含网关）内为字节副本；或采用**钉版拉取引用**——实现仓不保留副本，
      构建期按本仓 commit SHA 从 raw.githubusercontent.com 拉取，以钉死的 sha256 逐字节校验，不匹配即构建失败
      （fail-closed；2026-09-14 裁决，首个采用仓：wop-java-sdk）。interop 样本集钉版拉取时 sha256 必须钉
@@ -84,7 +84,7 @@
 2. **向量变更走 PR**：修改 `crypto/crypto-vectors.json` 或 `interop/v1/interop-cases.json` 的 commit
    **必须通过 PR 合并进本仓后**，各实现仓才能做对应的代码/测试/钉值变更（先合 PR、后改码；
    钉版拉取仓同步更新钉死的 commit SHA 与 sha256）。
-3. **副本同步**：持有字节副本的仓（六 SDK 仓的 spec 文档 + 各实现仓的 vectors）CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）；网关仓 spec 文档为指针引用，不适用字节比对；钉版拉取仓不持有副本，同样不适用字节比对——其等价且更强的防线是每次构建对拉取内容做 sha256 校验（比对频率从 CI 期提升到每次构建），钉值升级同第 2 条流程（先合本仓 PR、后改实现仓钉值）。
+3. **副本同步**：持有字节副本的仓（六 SDK 仓的 spec 文档——含 sdk-spec / **config-spec** / crypto-spec——+ 各实现仓的 **vectors 与 interop 样本集**）CI 必须含"本仓真源 vs 本地副本"字节比对，不一致即 fail（禁止降级为 warning）；网关仓 spec 文档为指针引用，不适用字节比对；钉版拉取仓不持有副本，同样不适用字节比对——其等价且更强的防线是每次构建对拉取内容做 sha256 校验（比对频率从 CI 期提升到每次构建），钉值升级同第 2 条流程（先合本仓 PR、后改实现仓钉值）。
 4. **spec 版本事件联动清单**：任何决策钉死 / 版本 bump / 状态变更合入后，必须逐项核对下列索引面并同 PR（或紧随 PR）刷新（全仓 `grep 'v0\.'` 自查）：
    - 本 README 文档目录表的「版本 / 状态」列；
    - `docs/fault-injection-playbook.md` 头注「协议依据」；
