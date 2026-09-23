@@ -89,7 +89,9 @@ WopClient / Client（协议客户端 + 一站式入口，K17：不另设独立�
 
 RequestOptions（请求级覆盖，商户可见）
   ├─ none() / builder()
-  └─ 可覆盖：appKey / suite / 双钥 / expiredSeconds / serverRoot / connectTimeout / readTimeout
+  ├─ 可覆盖：appKey / suite / 双钥 / expiredSeconds / serverRoot / connectTimeout / readTimeout
+  └─ 透传标记：requestId（`requestId(String)`，sdk-spec 附录 I；非配置覆盖——无全局 JSON 项，
+      不入 §6.2 合并语义，仅按附录 I/I2 校验〔trim 前控制字符扫描、trim 后 UTF-8 字节 ≤128〕后随请求上行）
 
 Transport（HTTP 适配层，sdk-spec §1.1）
   ├─ send(draft) → TransportResponse              # 既有
@@ -316,6 +318,11 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | `httpClient.connectTimeout` / `readTimeout` | ✅ | ✅（各适配器能力边界见语言附录） |
 | `backupServerRoots` | ✅ | ❌ |
 | `httpClient.maxRetryCount` | ✅ | ❌ |
+| `requestId` | ❌ | ✅（透传标记，sdk-spec 附录 I；非配置覆盖，见下注） |
+
+> 注：`requestId` 为请求级**透传标记**而非配置覆盖：无全局 JSON 项、不参与 §6.2 合并，
+> SDK 按附录 I/I2 校验（trim 前控制字符扫描、trim 后 UTF-8 字节 ≤128）后写入
+> `x-wop-request-id` 头（恒不入签；未传时缺省生成 UUID 并在出向日志打印最终值）。
 
 多 appKey：出向经 `RequestOptions` 临时指定另一套凭证；入向回调经 `verifyCallback` 凭证覆盖重载（K10）。
 
