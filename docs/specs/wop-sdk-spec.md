@@ -49,6 +49,7 @@
 | F7 | 线上字节格式 | base64url 无填充（拒收 `=`）；SM2 签名裸 r‖s 64B；SM2 密文 C1C3C2；RSA 公钥 SPKI/SM2 未压缩点 | §3.3/§3.4/D9/D10 |
 | F8 | 向量合规 | 测试消费黄金向量 fixture，**字节级**一致；负向量（tamper/跨族/错格式）必须拒 | D9/B.2 |
 | F9 | 防重放辅助 | CSPRNG nonce 生成、毫秒时间戳、expiredSeconds 组装 | §7 |
+| F10 | 商户请求标识透传 | `x-wop-request-id` 可选透传头：商户传值或缺省 UUID 自生成；恒不入签；出向日志必打值 | 附录 I |
 
 ## 2. 概念 API（各语言惯用映射）
 
@@ -82,6 +83,8 @@ WopClient / WopConfig
 - `x-wop-sign`（securityReq 声明与签名的载体）不参与自身签名。
 - SM2-SM3 下 ZA 的 userId 取**出向请求实际携带的 `x-wop-appkey` 值**（= `config.appKey`
   的同一序列化结果），闭环 D14：签名身份与请求身份恒同源，禁止读库默认值。
+- **唯一可选透传头（附录 I，2026-09-23 增补）**：`x-wop-request-id` 恒不入签——本表即签名白名单
+  冻结全集，不因透传头扩容；缺省 UUID 自生成、出向日志必打，契约详见附录 I。
 
 ### 2.2 错误契约（WopError，2026-08-31 增补）
 
@@ -136,6 +139,7 @@ WopClient / WopConfig
 | A5 | 双语 README | 中文默认 + 英文，含四段必备（快速开始/密钥/L0L2/向量自测） |
 | A6 | 协议语义 | D2 无 body 缺席、I1 digest 入签、I7 错误模糊、F6 校验顺序 |
 | A7 | 构建 | 语言标准构建零警告级错误，CI 绿 |
+| A8 | 请求标识透传 | 附录 I 全项：恒不入签（带/不带 `x-wop-request-id` 签名字节同值）、缺省 UUID（去连字符 32 hex）、控制字符与超长拒（构造即拒 `configuration`）、出向日志含最终头值 |
 
 ## 6. 决策记录
 
@@ -338,3 +342,33 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 
 - 分步 API（`buildRequest` / `verifyResponse` / `verifyCallback` + RequestDraft 直消费）是协议核心的公开承诺面；一站式 `execute` 类入口为其上的组合便利层，不取代、不绕过、不另行定义协议语义（正文 §2 注已同步）。
 - 各语言一站式入口的配置加载、传输装配与生命周期细则由 [wop-sdk-config-spec](./wop-sdk-config-spec.md) 承接（§10 概览 + 附录 A–F 各语言绑定）；其裁决不修改本规格正文语义。
+
+---
+
+## 附录 I：可选透传头 x-wop-request-id（商户请求标识，2026-09-23 增补）
+
+> 背景：网关 AccessLogFilter 已在消费 `x-wop-request-id` 做访问日志关联，但三端（网关/SDK/商户文档）实现先于规范（wop-java-sdk PR #42 评审裁决）。本附录将透传头纳入统一规格：可选、恒不入签、缺省自生成、出向日志必打，六仓同等生效。本附录条款与正文同级生效；§1.3 功能面（F10）与 §5 验收（A8）已同步。零协议行为变更：验签/解密/信封语义均不依赖该头。
+
+### I1. 头语义与签名义务（不变更 §2.1 冻结清单）
+
+- `x-wop-request-id` 为**唯一出向可选透传头**：商户按请求级选项（概念名 `requestId`，各语言惯用映射承接）提供，SDK 将其 trim 后值写入 `RequestDraft.headers`。
+- **恒不入 signedHeaders**：网关按 §2.1 冻结清单 + 附录 G 重算 canonical 验签，签名集合多一头即签名不匹配；实现必须在签名计算完成**之后**写入该头（工序性防误入签），禁止以任何配置项扩容签名白名单。验收锚：带/不带透传头的 `x-wop-sign` 字节同值（A8）。
+- 网关侧仅作日志关联消费（AccessLog），协议行为零依赖：头缺席/重复不构成协议错误，入向（响应/回调校验）不存在对应头。
+
+### I2. 值校验（构造即拒，`configuration` 类）
+
+- 商户传入值先按**原值**（trim 前）逐字符扫描控制字符（`c < 0x20 || c == 0x7f`，含 CR/LF/NUL/DEL），命中即拒（`configuration`，§2.2，I7 文案明确）——防头注入（CR/LF 头走私/响应分割）；扫描必须在 trim 之前，首尾控制字符同拦（trim 会静默剥离它们而脏值仍落头）。
+- trim 后为空 → 视为未设置，走缺省生成（I3）；trim 后长度 > 128 字符 → 拒（防 Nginx/ingress `large_client_header_buffers` 缓冲拒绝表现为莫名 400/断连）。
+- 校验时机为请求级选项构造/装配时（fail-fast），不得延迟到网络发送前。
+
+### I3. 缺省自生成与日志义务
+
+- 商户未设置（或 trim 后为空）→ SDK **每次构造请求时**生成缺省值：UUID 去连字符（小写 32 位 hex，v4 语义），即线上头字节值；最终头**恒存在**（商户值或缺省值二选一）。
+- 缺省生成属 CSPRNG 派生（与 nonce/IV 同源语义，F9）：§2 确定性要求的豁免项由「IV/nonce」扩为「IV/nonce/缺省 requestId」；生成器必须可注入/可替换（测试确定性锚，与 clock/nonce 注入同级）。商户显式传值时原值上行，禁止二次改写。
+- **日志义务**：SDK 在出向请求构造点以 INFO 级（或各语言惯用对应级）打印最终 `x-wop-request-id` 值，用于商户侧与网关 AccessLog 关联排查。该值为非敏感标识，**豁免凭证脱敏纪律**（对照 Java K16 仅约束密钥材料）——禁止打码、禁止吞并该日志行；日志缺字段视为实现缺陷（A8 可测）。
+
+### I4. 跨语言落地义务（六仓同等）
+
+- Java / Go / TypeScript / Python / PHP / .NET 六仓全部实现本附录；分步 `buildRequest` 与一站式 `execute` 两层入口同等生效（一站式经 `buildRequest` 组装，不另行注入、不双写）。
+- 请求级选项由各语言惯用 API 承接（Java 已落地：`WopRequestOptions.requestId`，wop-java-sdk 分支 `feature_20260922_fix`）；先行实现的仓以本附录为准回溯对齐，**缺省生成（I3）与日志义务为对齐重点**——仅透传商户值而不自生成、不打日志的实现均视为未完成。
+- 传输适配层零改动：透传头是 `RequestDraft.headers` 的普通成员，随现有传输路径上行；§1.1 适配器家族（含 U2 unirest）自动继承。
