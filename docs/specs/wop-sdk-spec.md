@@ -358,9 +358,7 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 ### I2. 值校验（构造即拒，`configuration` 类）
 
 - 商户传入值先按**原值**（trim 前）逐字符扫描控制字符（`c < 0x20 || c == 0x7f`，含 CR/LF/NUL/DEL），命中即拒（`configuration`，§2.2，I7 文案明确）——防头注入（CR/LF 头走私/响应分割）；扫描必须在 trim 之前，首尾控制字符同拦（trim 会静默剥离它们而脏值仍落头）。
-- **trim**（I1/I3 同义语）＝去除首尾空白字符，空白类与附录 G2 TrimAll 同集（空格、`	`、`
-`、``、``、`
-`）；控制字符已在上一步原值扫描中全部拒绝，故 trim 不会静默剥离空白类以外的 `≤0x20` 字符。trim 后为空 → 视为未设置，走缺省生成（I3）。
+- **trim**（I1/I3 同义语）＝去除首尾空白字符，空白类与附录 G2 TrimAll 同集（空格、`\t`、`\n`、`\x0B`、`\f`、`\r`，以可见转义序列书写）；控制字符已在上一步原值扫描中全部拒绝，故 trim 不会静默剥离空白类以外的 `≤0x20` 字符。trim 后为空 → 视为未设置，走缺省生成（I3）。
 - trim 后 **UTF-8 编码字节长度** > 128 → 拒（计量单位为线上字节数——Nginx/ingress `large_client_header_buffers` 按 UTF-8 字节缓冲；ASCII 标识场景等价于 128 字符。以 UTF-16 code unit 计长的语言〔如 Java `String.length`〕须显式按 UTF-8 编码后计量，见 I4）。防超长头被缓冲策略拒绝表现为莫名 400/断连。
 - **值语义约束（CWE-532）**：`requestId` 必须为不含个人数据的**不透明关联标识**（opaque correlation id，如 UUID/trace-id）；商户不得在值中携带邮箱、账号、手机号、证件号等个人信息——该值按 I3 全量出向日志打印并被网关访问日志留存，携带个人信息即构成日志泄露面。SDK 不做 PII 语义识别（不越权解释商户标识），该义务由本条款与商户接入评审约束。
 - 校验时机为请求级选项构造/装配时（fail-fast），不得延迟到网络发送前。
