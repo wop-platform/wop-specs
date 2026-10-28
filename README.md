@@ -8,7 +8,7 @@
 | 文档 | 版本 | 状态 | 说明 |
 |------|------|------|------|
 | [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 已评审冻结（D1–D15，2026-09-01） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
-| [docs/specs/wop-sdk-spec.md](docs/specs/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F9、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、附录 G canonicalRequest 拼装规则（G1–G3）、附录 H 适配器勘误与共存增补（U1–U3）、验收标准 A1–A7 |
+| [docs/specs/wop-sdk-spec.md](docs/specs/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F11、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、附录 G canonicalRequest 拼装规则（G1–G3）、附录 H 适配器勘误与共存增补（U1–U3）、附录 I 可选透传头 x-wop-request-id（I1–I4）、附录 J 子商户身份头 x-wop-sub-mch-id（J1–J4，ISV D-13）、验收标准 A1–A9 |
 | [docs/specs/wop-sdk-config-spec.md](docs/specs/wop-sdk-config-spec.md) | v0.3-draft | 已评审（K1–K26，2026-09-15） | 各语言 SDK 配置与客户端规范（目标态）：方向性凭证视图（config-spec K25，crypto-spec D14/D15）、resetDefault 并发重置（config-spec K26）、HTTPS 与 query·fragment 校验（K20）、六语言重复键路径（K21）、重定向矩阵（§7.4.1）、附录 A–F 语言细则 |
 | [crypto/crypto-vectors.json](crypto/crypto-vectors.json) | 2026-08-28 | 稳定 | 黄金测试向量（TEST-ONLY 密钥）：跨语言**字节级**断言基准，防实现漂移的验收载体（D9） |
 | [interop/v1/](interop/v1/) | wop-interop-1 | 冻结 | 协议编排互操作样本集（30 条：6 build + 7 positive + 17 negative）：canonicalRequest、signedHeaders、L2 信封与 canonical 错误分类的跨仓一致性合同 |
@@ -53,13 +53,15 @@
 | crypto-spec I1–I7 | 协议不变式 | crypto-strategy-spec §10.1 |
 | crypto-spec Q1–Q5 | 已关闭五问 | crypto-strategy-spec §9（决策已并入附录 C） |
 | sdk-spec Q1–Q7 | SDK 裁决记录 | wop-sdk-spec 文件头 + §6 |
-| sdk-spec F1–F9 | SDK 功能面 | wop-sdk-spec §1.3 |
+| sdk-spec F1–F11 | SDK 功能面 | wop-sdk-spec §1.3 |
 | sdk-spec D1–D7 | 跨语言实现勘误纪律 | wop-sdk-spec 附录 D |
 | sdk-spec E1–E3 | 跨语言质量任务契约 | wop-sdk-spec 附录 E |
 | sdk-spec G1–G3 | canonicalRequest 拼装规则 | wop-sdk-spec 附录 G |
 | sdk-spec U1–U3 | Java 适配器勘误与共存增补 | wop-sdk-spec 附录 H |
+| sdk-spec I1–I4 | 可选透传头 x-wop-request-id | wop-sdk-spec 附录 I |
+| sdk-spec J1–J4 | 子商户身份头 x-wop-sub-mch-id（ISV D-13） | wop-sdk-spec 附录 J |
 | config-spec K1–K26 | SDK 配置层裁决记录 | wop-sdk-config-spec §12 |
-| sdk-spec A1–A7 | 每仓验收标准 | wop-sdk-spec §5 |
+| sdk-spec A1–A9 | 每仓验收标准 | wop-sdk-spec §5 |
 | playbook P1–P7 / N1–N6 | 故障注入场景 | fault-injection-playbook §1/§2 |
 
 ## 📐 版本与变更策略

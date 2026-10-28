@@ -50,6 +50,7 @@
 | F8 | 向量合规 | 测试消费黄金向量 fixture，**字节级**一致；负向量（tamper/跨族/错格式）必须拒 | D9/B.2 |
 | F9 | 防重放辅助 | CSPRNG nonce 生成、毫秒时间戳、expiredSeconds 组装 | §7 |
 | F10 | 商户请求标识透传 | `x-wop-request-id` 可选透传头：商户传值或缺省 UUID 自生成；恒不入签；出向日志必打值 | 附录 I |
+| F11 | 子商户身份头 | `x-wop-sub-mch-id`（ISV）：请求级 `subMchId`（= 子商户 `plf_co_id`）在签名前写入并自动入签；未设置头缺席、签名字节零回归（AC-20）；值校验见附录 J | 附录 J、ISV D-13 |
 
 ## 2. 概念 API（各语言惯用映射）
 
@@ -79,12 +80,16 @@ WopClient / WopConfig
 | `x-wop-encrypt` | 仅 L2 加密请求必传；L0 缺席 | ✅ | DEK 载荷 `L2;dek=alg$key$iv`（F5） |
 | `x-wop-nonce` | 恒必传 | ✅ | CSPRNG（F9） |
 | `x-wop-timestamp` | 恒必传 | ✅ | 毫秒时间戳（F9） |
+| `x-wop-sub-mch-id` | 仅当商户设置请求级 `subMchId`（附录 J）；未设置必须缺席 | ✅ | `subMchId` 的 trim 后值（= 子商户 `plf_co_id`），构造即校验（J2） |
 
 - `x-wop-sign`（securityReq 声明与签名的载体）不参与自身签名。
 - SM2-SM3 下 ZA 的 userId 取**出向请求实际携带的 `x-wop-appkey` 值**（= `config.appKey`
   的同一序列化结果），闭环 D14：签名身份与请求身份恒同源，禁止读库默认值。
 - **唯一可选透传头（附录 I，2026-09-23 增补）**：`x-wop-request-id` 恒不入签——本表即签名白名单
   冻结全集，不因透传头扩容；缺省 UUID 自生成、出向日志必打，契约详见附录 I。
+- **条件身份头（附录 J，2026-10-28 增补）**：`x-wop-sub-mch-id` 出现即必签——必须在签名计算
+  **之前**写入头集合，与其余入签头同源；未设置（或 trim 后为空）时头缺席，出向字节与旧版
+  逐字节一致（AC-20）。它不是透传头：与附录 I 的 `x-wop-request-id`（恒不入签）语义相反。
 
 ### 2.2 错误契约（WopError，2026-08-31 增补）
 
@@ -140,6 +145,7 @@ WopClient / WopConfig
 | A6 | 协议语义 | D2 无 body 缺席、I1 digest 入签、I7 错误模糊、F6 校验顺序 |
 | A7 | 构建 | 语言标准构建零警告级错误，CI 绿 |
 | A8 | 请求标识透传 | 附录 I 全项：恒不入签（带/不带 `x-wop-request-id` 签名字节同值）、缺省 UUID（去连字符 32 hex）、控制字符拒（trim 前原值扫描）与超长拒（trim 后 UTF-8 字节 > 128，构造即拒 `configuration`）、出向日志含最终头值 |
+| A9 | 子商户身份头 | 附录 J 全项：带 `subMchId` 时 `x-wop-sub-mch-id` 入 signedHeaders 且签名可验证；不设置（或空白）时出向头集合与 `x-wop-sign` 与旧版逐字节一致（AC-20）；控制字符/非 ASCII/内部空白/超长（trim 后 > 128）构造即拒 `configuration` |
 
 ## 6. 决策记录
 
@@ -374,3 +380,30 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 - Java / Go / TypeScript / Python / PHP / .NET 六仓全部实现本附录；分步 `buildRequest` 与一站式 `execute` 两层入口同等生效（一站式经 `buildRequest` 组装，不另行注入、不双写）。
 - 请求级选项由各语言惯用 API 承接（多语言绑定见 [wop-sdk-config-spec](./wop-sdk-config-spec.md) §2/§6；Java 已落地：`WopRequestOptions.requestId`，wop-java-sdk 分支 `feature_20260922_fix`）；先行实现的仓以本附录为准回溯对齐，**缺省生成（I3）、日志义务与长度单位（I2，UTF-8 字节计）为对齐重点**——仅透传商户值而不自生成、不打日志、以字符计长的实现均视为未完成。
 - 传输适配层零改动：透传头是 `RequestDraft.headers` 的普通成员，随现有传输路径上行；§1.1 适配器家族（含 U2 unirest）自动继承。
+
+## 附录 J：子商户身份头 x-wop-sub-mch-id（ISV 一期 D-13，2026-10-28 增补）
+
+> 背景：ISV 模式下网关按 `x-wop-sub-mch-id` 识别子商户身份，并要求该头**条件强制入签**（网关侧真源：gtsp-wop-service 仓 `docs/specs/isv-mode/requirements-v2.md` FR-7 / D2）。六语言 SDK 已完成「请求级 `subMchId` → 签名前写入头 → signedHeaders 自动包含」（wop-java-sdk `984d307`、wop-go-sdk `cffc399`、wop-typescript-sdk `a68dfc9`、wop-python-sdk `0b8b807`、wop-php-sdk `0d931d2`、wop-dotnet-sdk `b9d7aad`，2026-10-27）。本附录把该能力纳入统一规格；§1.3 功能面（F11）与 §5 验收（A9）已同步，§2.1 表按条件项扩容。零协议行为变更：未设置 `subMchId` 时出向字节与旧版完全一致。
+
+### J1. 头语义与签名义务（§2.1 条件扩容）
+
+- `x-wop-sub-mch-id` 是**子商户身份头**：值为子商户 IAM 平台企业 id（`plf_co_id`），由商户按请求级选项（概念名 `subMchId`）提供；SDK 在**签名计算之前**写入 `RequestDraft.headers`，由 signedHeaders 组装自动纳入签名（禁止签名后再补头）。
+- 出现即必签：携带该头却未入 signedHeaders 的请求被网关拒绝（`OP_GW_1017`）。
+- **缺席零回归（AC-20）**：未设置、或 trim 后为空 → 头缺席（= 应用自身身份调用），头集合与 `x-wop-sign` 字节与旧版逐字节一致；禁止为空值补占位、禁止自生成默认值——与附录 I/I3 的「缺省恒生成」相反。
+- 该头**不是透传头**：附录 I 的 `x-wop-request-id` 恒不入签；本头恒入签。两者不可互相类推。
+
+### J2. 值校验（构造即拒，`configuration` 类）
+
+- trim 前按**原值**逐字符扫描：仅允许可打印 ASCII `0x20..0x7E`；控制字符（含 CR/LF/NUL/DEL）与非 ASCII 一律拒（防头注入与签名/身份歧义）。
+- **trim** 语义与空白集同附录 I/I2；trim 后为空 → 视为未设置（J1 缺席口径）；trim 后含内部空格 → 拒（网关 canonical trimall 折叠与身份查询不一致）；trim 后长度 > 128 → 拒（值已限定 ASCII，字符数 = 字节数）。
+- 校验时机为请求级选项构造/装配时（fail-fast），违规抛 `configuration` 类 WopError（§2.2，I7 文案明确）。
+
+### J3. 跨语言落地义务（六仓同等）
+
+- 六仓全部实现本附录；分步 `buildRequest` 与一站式 `execute` 两层入口同等生效（一站式经 `buildRequest` 组装，不另行注入、不双写）。
+- 请求级选项由各语言惯用 API 承接（配置层登记见 [wop-sdk-config-spec](./wop-sdk-config-spec.md) §6.1；已落地形状：Java `WopRequestOptions.builder().subMchId(..)`、Go `WithSubMchID`、TypeScript `RequestOptions.subMchId`，Python/.NET/PHP 同名参数或属性）。
+- 入向（`verifyResponse` / `verifyCallback`）不消费该头；「请求只带出向选项」不得被误判为入向凭证覆盖（实现细节可用独立标志区分，但不得把该头纳入响应验签白名单）。
+
+### J4. 网关侧契约（引用，不在本仓维护）
+
+- 声明却未携带 / 携带却未入签 → `OP_GW_1017`；值被篡改 → 签名不匹配 `OP_GW_1022`；`app_type=10` 应用携带该头 → `OP_GW_1101`。
