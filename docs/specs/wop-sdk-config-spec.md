@@ -2,7 +2,6 @@
 
 > 版本：v0.3-draft（目标态规格）
 > 日期：2026-09-15
-> 勘误：2026-11-19（`suite` 补入 RSA2048；`expiredSeconds` 补上限 86400）
 > 前版：v0.2-draft（Java 绑定专版，2026-09-11；本版扩展为六语言统一规格，Java 细节迁入附录 A）
 > 适用仓库：github.com/wop-platform/wop-{lang}-sdk
 > 上游规格：[wop-sdk-spec.md](./wop-sdk-spec.md)（v1.0-ratified，附录 H U3 一站式入口承接本规格）
