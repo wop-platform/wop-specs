@@ -2,7 +2,7 @@
 
 > 版本：v0.3-draft（目标态规格）
 > 日期：2026-09-15
-> 勘误：2026-11-19（`suite` 补入 RSA2048；`expiredSeconds` 补上限 86400；附录 A 状态列按实际交付刷新）
+> 勘误：2026-11-19（`suite` 补入 RSA2048；`expiredSeconds` 补上限 86400）
 > 前版：v0.2-draft（Java 绑定专版，2026-09-11；本版扩展为六语言统一规格，Java 细节迁入附录 A）
 > 适用仓库：github.com/wop-platform/wop-{lang}-sdk
 > 上游规格：[wop-sdk-spec.md](./wop-sdk-spec.md)（v1.0-ratified，附录 H U3 一站式入口承接本规格）
@@ -519,7 +519,7 @@ finalUrl = trimTrailingSlash(serverRoot) + "/" + trimLeadingSlash(path)
 
 | # | 决策 | 依据 |
 |---|------|------|
-| K1 | 文档性质为**目标态规格 + 各语言现状锚点 + 差距台账** | 避免以现在时描述未交付能力 |
+| K1 | 文档性质为**目标态规格 + 各语言现状锚点** | 避免以现在时描述未交付能力；施工期过程记录不作为对外规范内容 |
 | K2 | `Transport` 既有单参签名不动；新增 default 双参 + `TransportCall`；内部 `RequestContext` 永不出现在 public 签名 | 保护商户自定义 Transport 与分步 API |
 | K3 | 请求级 serverRoot 覆盖 = 候选集整组替换，本笔关闭 Failover | 防止跨环境凭证漂移 |
 | K4 | 重试仅限 pre-send 失败；连接/读超时须可判别，不可判别不重试 | 非幂等 POST 重复提交风险 |
@@ -678,33 +678,6 @@ VerifyResult result = WopClient.defaultClient().execute(
 ```
 
 Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }`
-
-### A.7 实现差距台账（2026-11-19 复核：已清零）
-
-> 下表原为 P0–P2 施工期台账；2026-11-19 对照 wop-java-sdk `0.3.x` 源码逐项复核，17 项均已落地。
-> 保留能力清单作为验收索引，阶段列仅记录历史优先级。
-
-| # | 能力 | 状态 | 证据锚点 |
-|---|------|------|----------|
-| 1 | 配置加载 / 校验 / 仓库模板 | ✅ 已实现 | `WopSdkConfigLoader`（`loadDefault` / `load` / `clearCache`） |
-| 2 | `WopClient` 静态一站式入口 | ✅ 已实现 | `defaultClient` / `fromConfig` / `resetDefault` |
-| 3 | `execute` ×2 | ✅ 已实现 | `WopClient.execute`（含 options 重载） |
-| 4 | 凭证类型 toString 打码 | ✅ 已实现 | `WopSdkConfig.toString` / `WopClient.Config.toString` |
-| 5 | `WopRequestOptions` / `WopRequestContext` | ✅ 已实现 | `WopRequestOptions`（requestId / subMchId + 凭证覆盖） |
-| 6 | `verifyCallback` 四参重载 | ✅ 已实现 | `WopClient.verifyCallback` ×2 |
-| 7 | `Transport.send` 双参 + `TransportCall` | ✅ 已实现 | `Transport` / `TransportCall` |
-| 8 | 三适配器双参实现 | ✅ 已实现 | jdkhttp / okhttp / unirest |
-| 9 | jdkhttp 读超时默认 30000 | ✅ 已实现 | `JdkHttpTransport`（10s/30s） |
-| 10 | okhttp `followRedirects(false)` | ✅ 已实现 | `OkHttpTransport` |
-| 11 | 非 2xx 拦截 + 网关响应异常 | ✅ 已实现 | `WopClient.finishExecute` |
-| 12 | resolve 复校验 | ✅ 已实现 | `WopRequestContext.resolve` |
-| 13 | `FailoverTransport` | ✅ 已实现 | `FailoverTransport` |
-| 14 | `TransportFactory` SPI + META-INF/services | ✅ 已实现 | 三适配器 `META-INF/services` |
-| 15 | `wop.transport` 多 factory 选择 | ✅ 已实现 | `TransportFactory.discover(ClassLoader)` |
-| 16 | D4 11MB / 方法白名单 / octet-stream | ✅ 已实现 | 三适配器 |
-| 17 | path 校验（§7.7） | ✅ 已实现 | `ConfigUrlUtils.validateApiPath` |
-
-阶段：**P0** = 最小可用一站式（SPI、无 Failover、候选仅 serverRoot）；**P1** = 请求级覆盖 + 状态语义 + 适配器补齐；**P2** = Failover 与多传输选择。
 
 ### A.8 测试要点（Java）
 
