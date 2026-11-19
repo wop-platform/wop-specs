@@ -184,10 +184,10 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | 字段 | 类型 | 必填 | 默认 | 说明 |
 |------|------|------|------|------|
 | `appKey` | string | 是 | — | 商户 appKey（`x-wop-appkey`） |
-| `suite` | string | 是 | — | `WOP-RSA3072-SHA256` / `WOP-RSA4096-SHA256` / `WOP-SM2-SM3` |
+| `suite` | string | 是 | — | `WOP-RSA2048-SHA256` / `WOP-RSA3072-SHA256` / `WOP-RSA4096-SHA256` / `WOP-SM2-SM3`（平台当前默认开通 RSA2048） |
 | `merchantPrivateKey` | string | 是 | — | 商户私钥，PEM 或 Base64 单行 |
 | `platformPublicKey` | string | 是 | — | 平台公钥，PEM 或 Base64 单行 |
-| `expiredSeconds` | long | 否 | `1800` | 出向签名有效窗口（秒，须为正整数） |
+| `expiredSeconds` | long | 否 | `1800` | 出向签名有效窗口（秒，`(0, 86400]`；网关按 `x-wop-timestamp ± expiredSeconds` 校验） |
 
 #### 网关
 
@@ -225,6 +225,7 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 | `suite` 无法识别 | `不支持的算法套件: ...` |
 | 密钥格式/长度非法 | `密钥解析失败: ...` |
 | `expiredSeconds` ≤ 0 | `expiredSeconds 须为正整数` |
+| `expiredSeconds` > 86400 | `expiredSeconds 须在 (0, 86400] 秒内`（网关签名窗口上限） |
 
 ---
 
@@ -347,7 +348,7 @@ JSON 字段名与各语言配置模型均使用 **camelCase**。
 
 ### 6.3 resolve 复校验（fail-fast）
 
-合并后必须重新执行 §3.4 等价校验——suite 解析、双钥解析与套件族交叉校验、**请求级** `serverRoot` 的 URL 语法、**HTTPS scheme** 与 **query/fragment 拒绝**（K20，与加载期 `serverRoot` / `backupServerRoots` 逐项规则同口径）。失败同步抛 `WopError.configuration`。
+合并后必须重新执行 §3.4 等价校验——suite 解析、双钥解析与套件族交叉校验、**请求级** `serverRoot` 的 URL 语法、**HTTPS scheme** 与 **query/fragment 拒绝**（K20，与加载期 `serverRoot` / `backupServerRoots` 逐项规则同口径）、`expiredSeconds` 范围 `(0, 86400]`。失败同步抛 `WopError.configuration`。
 
 ### 6.4 性能
 
@@ -410,7 +411,7 @@ Failover 耗尽 → SDK 异常（cause = 最后一次异常），消息须区分
 
 | 语言 | 默认适配器须配置 |
 |------|-----------------|
-| Java | jdkhttp/unirest：不跟随〔现状〕；okhttp：`followRedirects(false)` |
+| Java | jdkhttp/okhttp/unirest：均不跟随（okhttp 显式 `followRedirects(false)`） |
 | Go | `http.Client{CheckRedirect: func(...) error { return http.ErrUseLastResponse }}` |
 | TypeScript | fetch：`redirect: 'manual'`；axios：`maxRedirects: 0` |
 | Python | urllib：禁用 `HTTPRedirectHandler`；httpx/requests：`allow_redirects=False` |
@@ -517,7 +518,7 @@ finalUrl = trimTrailingSlash(serverRoot) + "/" + trimLeadingSlash(path)
 
 | # | 决策 | 依据 |
 |---|------|------|
-| K1 | 文档性质为**目标态规格 + 各语言现状锚点 + 差距台账** | 避免以现在时描述未交付能力 |
+| K1 | 文档性质为**目标态规格 + 各语言现状锚点** | 避免以现在时描述未交付能力；施工期过程记录不作为对外规范内容 |
 | K2 | `Transport` 既有单参签名不动；新增 default 双参 + `TransportCall`；内部 `RequestContext` 永不出现在 public 签名 | 保护商户自定义 Transport 与分步 API |
 | K3 | 请求级 serverRoot 覆盖 = 候选集整组替换，本笔关闭 Failover | 防止跨环境凭证漂移 |
 | K4 | 重试仅限 pre-send 失败；连接/读超时须可判别，不可判别不重试 | 非幂等 POST 重复提交风险 |
@@ -611,9 +612,18 @@ public final class WopClient {
     public static WopClient fromConfig(WopSdkConfig config);
     public static void resetDefault();
     public static Builder builder();   // K11：程序化配置，build() 执行 §3.4 等价校验
+    public RequestDraft buildRequest(String method, String path, byte[] body, SecurityLevel level);
+    public RequestDraft buildRequest(String method, String path, byte[] body,
+                                     SecurityLevel level, WopRequestOptions options);
     public VerifyResult execute(String method, String path, byte[] body, SecurityLevel level);
     public VerifyResult execute(String method, String path, byte[] body,
                                 SecurityLevel level, WopRequestOptions options);
+    public VerifyResult verifyResponse(java.util.Map<String, String> headers, byte[] body,
+                                       String requestPath);
+    public VerifyResult verifyResponse(java.util.Map<String, String> headers, byte[] body,
+                                       String requestPath, WopRequestOptions options);
+    public VerifyResult verifyCallback(java.util.Map<String, String> headers, byte[] body,
+                                       String callbackPath);
     public VerifyResult verifyCallback(java.util.Map<String, String> headers, byte[] body,
                                        String callbackPath, WopRequestOptions options);
     // execute 路径：buildRequest(..., options) / verifyResponse(..., options)（§2 K24）
@@ -631,8 +641,8 @@ Classpath 读取：`Thread.currentThread().getContextClassLoader()` 优先，回
 | `connectTimeout` | 每请求 `setConnectTimeout` | 克隆 client `.connectTimeout` | **实例级**（K9，请求级不生效） |
 | `readTimeout` | 每请求 `setReadTimeout` | 克隆 client `.readTimeout` | 每请求（K9） |
 | PATCH 等扩展方法 | **fail fast 拒绝** | 支持 | 支持 |
-| 重定向 | 不跟随〔现状〕 | **须改**为不跟随 | 不跟随〔现状〕 |
-| 默认读超时 | 〔现状〕未设 → 须落地 30000 | 10000/30000 | 10000/30000 |
+| 重定向 | 不跟随 | 不跟随（`followRedirects(false)`） | 不跟随 |
+| 默认读超时 | 10000/30000 | 10000/30000 | 10000/30000 |
 
 **K9**：Unirest 连接超时为实例级，请求级 `connectTimeout` 覆盖不生效，README/Javadoc 必须披露。
 
@@ -667,30 +677,6 @@ VerifyResult result = WopClient.defaultClient().execute(
 ```
 
 Spring Boot：`@Bean WopClient wopClient() { return WopClient.defaultClient(); }`
-
-### A.7 实现差距台账
-
-| # | 能力 | 现状 | 动作 | 阶段 |
-|---|------|------|------|------|
-| 1 | 配置加载 / 校验 / 仓库模板 | 无 | 新增（内置极简解析器） | P0 |
-| 2 | `WopClient` 静态一站式入口 | 无 | 新增（K17/K15） | P0 |
-| 3 | `execute` ×2 | 无 | 新增 | P0 |
-| 4 | `Config`/`RequestOptions`/`RequestContext`/`WopClient.Config.toString` 打码 | 明文私钥 | 修复 + 回归（K16） | P0 |
-| 5 | `WopRequestOptions` / `WopRequestContext` | 无 | 新增 | P1 |
-| 6 | `verifyCallback` 四参重载 | 无 | 新增 | P1 |
-| 7 | `Transport.send` 双参 + `TransportCall` | 无 | 增量扩展 | P1 |
-| 8 | 三适配器双参实现 | 仅单参 | 实现 | P1 |
-| 9 | jdkhttp 读超时默认 30000 | 未设 | 修改 + 回归 | P1 |
-| 10 | okhttp `followRedirects(false)` | 跟随 | 修改 | P1 |
-| 11 | 非 2xx 拦截 + `WopGatewayResponseException` | statusCode 丢弃 | 新增 | P1 |
-| 12 | resolve 复校验 | 无 | 新增 | P1 |
-| 13 | `FailoverTransport` | 无 | 新增 | P2 |
-| 14 | `TransportFactory` SPI + META-INF/services | 无 | 新增（K18） | P0 |
-| 15 | `wop.transport` 多 factory 选择 | 无 | 新增 | P2 |
-| 16 | D4 11MB / 方法白名单 / octet-stream | 已实现 | 收编 | — |
-| 17 | path 校验（§7.7） | 无 | 新增 | P0 |
-
-阶段：**P0** = 最小可用一站式（SPI、无 Failover、候选仅 serverRoot）；**P1** = 请求级覆盖 + 状态语义 + 适配器补齐；**P2** = Failover 与多传输选择。
 
 ### A.8 测试要点（Java）
 

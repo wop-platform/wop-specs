@@ -31,7 +31,7 @@
 
 ### 1.2 套件支持矩阵（Q7 定稿）
 
-| 语言 | RSA3072/4096 | SM2-SM3 |
+| 语言 | RSA2048/3072/4096 | SM2-SM3 |
 |------|---------------|---------|
 | Java / Go / Python / .NET | ✅ | ✅（BC / emmansun / gmssl / BC.Net） |
 | TypeScript / PHP | ✅ | ❌ 首版明确抛“暂未支持”错误 + README 路线图（向量 fixture 全量拷贝，SM 段不消费，另有“SM 套件必须拒”的负测试） |
@@ -40,7 +40,7 @@
 
 | # | 功能 | 说明 | 依据 |
 |---|------|------|------|
-| F1 | 套件配置与解析 | securityReq 三套件（RSA3072/4096、SM2-SM3），跨族/非法拒绝 | spec §2 |
+| F1 | 套件配置与解析 | securityReq 四套件（RSA2048/3072/4096、SM2-SM3），跨族/非法拒绝（平台当前默认开通 RSA2048，其余以控制台密钥类型为准） | spec §2 |
 | F2 | canonicalRequest 构造 | 5 段 `\n`；header 值 Java-URLEncoder 语义（空格→%20 等）；字节级规则详见附录 G | 附录 G（G1–G3） |
 | F3 | 结构化 x-wop-sign | 商户私钥加签（出向）/ 平台公钥验签（响应与回调） | §3.3①、§7.3 |
 | F4 | x-wop-content-digest | `alg 小写hex` 恰一空格；算法随套件族；无 body 缺席；有 body 必传必入签 | D2/D3/I1 |
@@ -56,9 +56,9 @@
 
 ```
 WopClient / WopConfig
-  ├─ config: appKey, suite(securityReq), merchantPrivateKey, platformPublicKey, [gatewayBaseUrl]
+  ├─ config: appKey, suite(securityReq), merchantPrivateKey, platformPublicKey, [serverRoot]
   ├─ buildRequest(method, path, body?, level=L0/L2) → RequestDraft{headers, wireBody}
-  ├─ verifyResponse(headers, body) → VerifyResult{ok, plaintext?, reason?}   # 模糊 reason（I7）
+  ├─ verifyResponse(headers, body, requestPath) → VerifyResult{ok, plaintext?, reason?}   # 模糊 reason（I7）；requestPath 用于重建 canonical
   ├─ verifyCallback(headers, body, callbackPath) → VerifyResult              # URI 取回调 path
   └─ errors: 配置/协议类错误明确；验签/解密失败对外模糊（I7 纪律）
 ```
@@ -77,7 +77,7 @@ WopClient / WopConfig
 |--------|----------|----------|--------|
 | `x-wop-appkey` | 恒必传 | ✅ | `config.appKey` 同值序列化；SM2-SM3 套件下 ZA 计算的 userId 即此值（D14） |
 | `x-wop-content-digest` | 有 body 必传；无 body（GET）缺席——不定义空摘要中间态（D2） | ✅ | wire body 原始字节摘要，`alg 小写hex`（F4） |
-| `x-wop-encrypt` | 仅 L2 加密请求必传；L0 缺席 | ✅ | DEK 载荷 `L2;dek=alg$key$iv`（F5） |
+| `x-wop-encrypt` | 仅 L2 加密请求必传；L0 缺席 | ✅ | 加密指令 `L2;dek=<base64url(非对称包装(alg$key$iv))>`（F5；头内是包装后的载荷，裸 `alg$key$iv` 只是包装前明文） |
 | `x-wop-nonce` | 恒必传 | ✅ | CSPRNG（F9） |
 | `x-wop-timestamp` | 恒必传 | ✅ | 毫秒时间戳（F9） |
 | `x-wop-sub-mch-id` | 仅当商户设置请求级 `subMchId`（附录 J）；未设置必须缺席 | ✅ | `subMchId` 的 trim 后值（= 子商户 `plf_co_id`），构造即校验（J2） |
@@ -87,9 +87,10 @@ WopClient / WopConfig
   的同一序列化结果），闭环 D14：签名身份与请求身份恒同源，禁止读库默认值。
 - **唯一可选透传头（附录 I，2026-09-23 增补）**：`x-wop-request-id` 恒不入签——本表即签名白名单
   冻结全集，不因透传头扩容；缺省 UUID 自生成、出向日志必打，契约详见附录 I。
-- **条件身份头（附录 J，2026-10-28 增补）**：`x-wop-sub-mch-id` 出现即必签——必须在签名计算
-  **之前**写入头集合，与其余入签头同源；未设置（或 trim 后为空）时头缺席，出向字节与旧版
-  逐字节一致（AC-20）。它不是透传头：与附录 I 的 `x-wop-request-id`（恒不入签）语义相反。
+- **条件身份头（附录 J，2026-10-28 增补；2026-11-19 对齐网关口径）**：`x-wop-sub-mch-id` 由 SDK 在签名计算
+  **之前**写入头集合并自动入签；未设置（或 trim 后为空）时头缺席，出向字节与旧版
+  逐字节一致（AC-20）。网关侧仅对 ISV 应用（`app_type=20`）消费该头；普通应用（`app_type=10`）携带时按未携带忽略。
+  它不是透传头：与附录 I 的 `x-wop-request-id`（恒不入签）语义相反。
 
 ### 2.2 错误契约（WopError，2026-08-31 增补）
 
@@ -127,7 +128,7 @@ WopClient / WopConfig
 
 ## 4. 仓库与工程约定
 
-- 组织 `wop-platform`，仓库 `wop-<lang>-sdk`，主分支 `main`，MIT License，版本 0.1.0
+- 组织 `wop-platform`，仓库 `wop-<lang>-sdk`，主分支 `main`，MIT License，版本遵循语义化版本（具体版本以各仓 release 为准）
 - 目录：`src/`（或语言习惯）、`tests/`、`vectors/crypto-vectors.json`（fixture 副本，禁止手改；公开真源：[wop-specs · crypto/crypto-vectors.json](https://github.com/wop-platform/wop-specs/blob/main/crypto/crypto-vectors.json)）；或采用钉版拉取——不落副本，构建期按 wop-specs commit SHA 拉取并以钉死的 sha256 校验（2026-09-14 裁决，首个采用仓 wop-java-sdk）
 - `README.md`（**中文默认**）+ `README.en.md`（英文），内容含：快速开始、密钥准备、L0/L2 示例、向量自测、错误处理与模糊化说明
 - CI（GitHub Actions）：测试 + 覆盖率门禁（≥98%）+ 向量合规必须全绿
@@ -384,11 +385,13 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 ## 附录 J：子商户身份头 x-wop-sub-mch-id（ISV 一期 D-13，2026-10-28 增补）
 
 > 背景：ISV 模式下网关按 `x-wop-sub-mch-id` 识别子商户身份，并要求该头**条件强制入签**（网关侧真源：gtsp-wop-service 仓 `docs/specs/isv-mode/requirements-v2.md` FR-7 / D2）。六语言 SDK 已完成「请求级 `subMchId` → 签名前写入头 → signedHeaders 自动包含」（wop-java-sdk `984d307`、wop-go-sdk `cffc399`、wop-typescript-sdk `a68dfc9`、wop-python-sdk `0b8b807`、wop-php-sdk `0d931d2`、wop-dotnet-sdk `b9d7aad`，2026-10-27）。本附录把该能力纳入统一规格；§1.3 功能面（F11）与 §5 验收（A9）已同步，§2.1 表按条件项扩容。零协议行为变更：未设置 `subMchId` 时出向字节与旧版完全一致。
+>
+> **2026-11-19 口径对齐**（网关 2026-11-11 变更 ⑳）：`app_type=10` 携带该头按未携带忽略；仅 `app_type=20` 适用入签与 1102/1104/1106 判定；`app_type` 缺失/未知且携带 → `OP_GW_1101`；LEGACY 链携带 → `OP_GW_1101`。J1/J4 已按此修订。
 
 ### J1. 头语义与签名义务（§2.1 条件扩容）
 
 - `x-wop-sub-mch-id` 是**子商户身份头**：值为子商户 IAM 平台企业 id（`plf_co_id`），由商户按请求级选项（概念名 `subMchId`）提供；SDK 在**签名计算之前**写入 `RequestDraft.headers`，由 signedHeaders 组装自动纳入签名（禁止签名后再补头）。
-- 出现即必签：携带该头却未入 signedHeaders 的请求被网关拒绝（`OP_GW_1017`）。
+- **仅 ISV 应用（`app_type=20`）出现即必签**：携带该头却未入 signedHeaders 的请求被网关拒绝（`OP_GW_1017`）；普通应用（`app_type=10`）携带该头按未携带忽略（不要求入签、不返回 1017/1101）。
 - **缺席零回归（AC-20）**：未设置、或 trim 后为空 → 头缺席（= 应用自身身份调用），头集合与 `x-wop-sign` 字节与旧版逐字节一致；禁止为空值补占位、禁止自生成默认值——与附录 I/I3 的「缺省恒生成」相反。
 - 该头**不是透传头**：附录 I 的 `x-wop-request-id` 恒不入签；本头恒入签。两者不可互相类推。
 
@@ -406,4 +409,9 @@ canonicalRequest := authString "\n" httpRequestMethod "\n" canonicalURI
 
 ### J4. 网关侧契约（引用，不在本仓维护）
 
-- 声明却未携带 / 携带却未入签 → `OP_GW_1017`；值被篡改 → 签名不匹配 `OP_GW_1022`；`app_type=10` 应用携带该头 → `OP_GW_1101`。
+- 仅 `app_type=20`：声明却未携带 / 携带却未入签 → `OP_GW_1017`；值被篡改 → 签名不匹配 `OP_GW_1022`。
+- `app_type=10` 携带该头：按未携带忽略（不返回 1101/1017，不查询子商户）。
+- `app_type` 缺失/未知且携带该头 → `OP_GW_1101`。
+- LEGACY 固定密钥链携带该头 → `OP_GW_1101`。
+- `app_type=20` 继续判定：未归属 → `OP_GW_1102`；已停用 → `OP_GW_1104`；未授权 API → `OP_GW_1106`。
+

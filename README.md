@@ -23,18 +23,18 @@
 
 | 语言 | 仓库 | 套件支持 | 覆盖率（行/分支） |
 |------|------|----------|-------------------|
-| Java | [wop-java-sdk](https://github.com/wop-platform/wop-java-sdk) | RSA3072/4096 + SM2-SM3 | 100% / 98.4% |
-| Go | [wop-go-sdk](https://github.com/wop-platform/wop-go-sdk) | RSA3072/4096 + SM2-SM3 | 98.6%（语句）+ 显式分支矩阵 |
-| TypeScript | [wop-typescript-sdk](https://github.com/wop-platform/wop-typescript-sdk) | RSA3072/4096（SM2-SM3 列路线图） | 100% / 100% |
-| Python | [wop-python-sdk](https://github.com/wop-platform/wop-python-sdk) | RSA3072/4096 + SM2-SM3 | 100% / 100% |
-| PHP | [wop-php-sdk](https://github.com/wop-platform/wop-php-sdk) | RSA3072/4096（SM2-SM3 列路线图） | 门禁达标（PHPUnit） |
-| .NET | [wop-dotnet-sdk](https://github.com/wop-platform/wop-dotnet-sdk) | RSA3072/4096 + SM2-SM3 | 99.4% / 99.1% |
+| Java | [wop-java-sdk](https://github.com/wop-platform/wop-java-sdk) | RSA2048/3072/4096 + SM2-SM3 | 100% / 98.4% |
+| Go | [wop-go-sdk](https://github.com/wop-platform/wop-go-sdk) | RSA2048/3072/4096 + SM2-SM3 | 98.6%（语句）+ 显式分支矩阵 |
+| TypeScript | [wop-typescript-sdk](https://github.com/wop-platform/wop-typescript-sdk) | RSA2048/3072/4096（SM2-SM3 列路线图） | 100% / 100% |
+| Python | [wop-python-sdk](https://github.com/wop-platform/wop-python-sdk) | RSA2048/3072/4096 + SM2-SM3 | 100% / 100% |
+| PHP | [wop-php-sdk](https://github.com/wop-platform/wop-php-sdk) | RSA2048/3072/4096（SM2-SM3 列路线图） | 门禁达标（PHPUnit） |
+| .NET | [wop-dotnet-sdk](https://github.com/wop-platform/wop-dotnet-sdk) | RSA2048/3072/4096 + SM2-SM3 | 99.4% / 99.1% |
 
 > TypeScript / PHP 首版仅 RSA 套件为国密生态库成熟度所限（spec 裁决 Q7）：SM2/SM3/SM4-GCM 在两语言生态无主流库支持，官方 SDK 将以纯实现补齐（D11：官方 SDK 即 SM 生态答案），以黄金向量为唯一正确性锚。
 
 ## 🔐 协议一页速览
 
-- **套件声明**：`x-wop-sign` 中的 `securityReq` 三段式 `WOP-<密钥族>-<摘要族>`，合法组合仅 `WOP-RSA3072-SHA256`、`WOP-RSA4096-SHA256`、`WOP-SM2-SM3`，跨族拒绝
+- **套件声明**：`x-wop-sign` 中的 `securityReq` 三段式 `WOP-<密钥族>-<摘要族>`，合法组合为 `WOP-RSA2048-SHA256`、`WOP-RSA3072-SHA256`、`WOP-RSA4096-SHA256`、`WOP-SM2-SM3`，跨族拒绝（平台当前对外开放的套件以开发者中心密钥类型为准）
 - **四维算法**：签名 / 报文加密（L2 数字信封 bulk）/ DEK 包装 / 内容摘要，由套件一次性原子推导
 - **线上编码**：Base64URL 无填充（拒收 `=`）；hex 一律小写；SM2 签名裸 r‖s 64B、密文 C1C3C2，线上禁 ASN.1/DER
 - **安全时序**：先验签后解密；DEK alg 族比对先于 bulk 解密；digest 必入签名头（I1）
