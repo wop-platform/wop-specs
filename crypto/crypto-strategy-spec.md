@@ -2,8 +2,9 @@
 
 > 版本：v0.4-draft
 > 初始版本日期：2026-08-31
-> 最后更新：2026-09-02
+> 最后更新：2026-11-19
 > 状态：已评审（决策 D1–D15 冻结，见附录 C）
+> 勘误（2026-11-19）：补入 `RSA2048` 套件——平台与六语言 SDK 均已支持，原文漏列（见 2.1/2.2/2.3/3.1/3.2/3.3/附录 A），零行为变更
 > 范围：仅描述**目标需求**，不涉及现有实现（绿地需求文档，D1）
 > 配套测试向量：[crypto-vectors.json](crypto-vectors.json)（TEST-ONLY 密钥，跨语言字节级断言基准，附录 B.2 / D9 的载体）
 
@@ -49,7 +50,7 @@ WOP-<密钥算法标识>-<摘要算法标识>
 | 段 | 必填 | 说明 |
 |----|------|------|
 | 前缀 | 是 | 固定 `WOP` |
-| 密钥算法标识 | 是 | 非对称密钥族，如 `RSA3072`、`RSA4096`、`SM2` |
+| 密钥算法标识 | 是 | 非对称密钥族，如 `RSA2048`、`RSA3072`、`RSA4096`、`SM2` |
 | 摘要算法标识 | 是 | 哈希摘要族，如 `SHA256`、`SM3` |
 
 ### 2.2 合法取值
@@ -58,6 +59,7 @@ WOP-<密钥算法标识>-<摘要算法标识>
 
 | 值 | 体系 | 说明 |
 |----|------|------|
+| `RSA2048` | 国际 | RSA 2048 位（平台当前默认开通） |
 | `RSA3072` | 国际 | RSA 3072 位 |
 | `RSA4096` | 国际 | RSA 4096 位 |
 | `SM2` | 国密 | SM2 椭圆曲线 |
@@ -73,9 +75,11 @@ WOP-<密钥算法标识>-<摘要算法标识>
 
 | securityReq 示例 | 是否合法 |
 |------------------|----------|
+| `WOP-RSA2048-SHA256` | ✅ 国际 |
 | `WOP-RSA3072-SHA256` | ✅ 国际 |
 | `WOP-RSA4096-SHA256` | ✅ 国际 |
 | `WOP-SM2-SM3` | ✅ 国密 |
+| `WOP-RSA2048-SM3` | ❌ 国际密钥 + 国密摘要，禁止 |
 | `WOP-RSA3072-SM3` | ❌ 国际密钥 + 国密摘要，禁止 |
 | `WOP-SM2-SHA256` | ❌ 国密密钥 + 国际摘要，禁止 |
 
@@ -118,15 +122,16 @@ securityReq
 |------|------|----------------|----------------|
 | **① 签名算法** | 对 canonicalRequest 加签 / 验签 | `SHA256withRSA`（PKCS#1 v1.5） | `SM3withSM2` |
 | **② 报文加密算法** | L2 信封 `encrypted` 字段对称加解密 | `AES-256-GCM/NoPadding` | `SM4-GCM/NoPadding` |
-| **③ 密钥加密算法** | DEK 非对称包装（`x-wop-encrypt;dek=`） | `RSA-3072/4096/ECB/OAEPWithSHA-256AndMGF1Padding` | `SM2` |
+| **③ 密钥加密算法** | DEK 非对称包装（`x-wop-encrypt;dek=`） | `RSA-2048/3072/4096/ECB/OAEPWithSHA-256AndMGF1Padding` | `SM2` |
 | **④ 摘要算法** | 请求体等内容哈希（`x-wop-content-digest`） | `SHA-256` | `SM3` |
 
-> RSA4096 套件：③ 中密钥长度替换为 4096，其余算法与国际 3072 相同（评审确认，原 Q2 关闭）。
+> RSA 族套件仅密钥长度不同：RSA2048 / RSA3072 / RSA4096 的 ①②④ 完全相同，仅 ③ 的密钥长度与签名定长随长度变化（2048→342 字符、3072→512 字符、4096→683 字符）。
 
 ### 3.2 推导规则
 
 | securityReq | ① 签名 | ② 报文加密 | ③ 密钥加密 | ④ 摘要（header 标签） |
 |-------------|--------|------------|------------|--------|
+| `WOP-RSA2048-SHA256` | SHA256withRSA | AES-256-GCM | RSA-2048 OAEP | `sha-256` |
 | `WOP-RSA3072-SHA256` | SHA256withRSA | AES-256-GCM | RSA-3072 OAEP | `sha-256` |
 | `WOP-RSA4096-SHA256` | SHA256withRSA | AES-256-GCM | RSA-4096 OAEP | `sha-256` |
 | `WOP-SM2-SM3` | SM3withSM2 | SM4-GCM | SM2 | `sm3` |
@@ -137,7 +142,7 @@ securityReq
 
 | 算法 | JCA 标识 | 线上编码 | 说明 |
 |------|----------|----------|------|
-| SHA256withRSA | `SHA256withRSA` | Base64URL 无填充（RSA3072 → 恒 512 字符，RSA4096 → 恒 683 字符） | PKCS#1 v1.5；全语言原生支持 |
+| SHA256withRSA | `SHA256withRSA` | Base64URL 无填充（RSA2048 → 恒 342 字符，RSA3072 → 恒 512 字符，RSA4096 → 恒 683 字符） | PKCS#1 v1.5；全语言原生支持 |
 | SM3withSM2 | `SM3withSM2` | **裸 r‖s，固定 64 字节**（r、s 各 32 字节大端，不足左补零），Base64URL 无填充后恒 86 字符 | 评审确认（原 Q1 关闭）；**线上禁止 DER/ASN.1**，DER 只许存在于 JVM 内部，Java 侧用 BC 工具转换 |
 
 定长编码使格式校验可前置：长度不符直接按解析类拒绝。
@@ -157,7 +162,8 @@ securityReq
 
 | 算法 | Transformation | 说明 |
 |------|----------------|------|
-| RSA-3072-OAEP | `RSA/ECB/OAEPWithSHA-256AndMGF1Padding` | OAEP 摘要 SHA-256，**MGF1 摘要显式钉死 SHA-256** |
+| RSA-2048-OAEP | `RSA/ECB/OAEPWithSHA-256AndMGF1Padding` | OAEP 摘要 SHA-256，**MGF1 摘要显式钉死 SHA-256** |
+| RSA-3072-OAEP | 同上，密钥 3072 位 | |
 | RSA-4096-OAEP | 同上，密钥 4096 位 | |
 | SM2 | SM2 公钥加密 | 线上密文 = **C1C3C2 裸拼接**（新国标 GM/T 0003），C1 = 未压缩点 `04‖X‖Y` 65 字节，整体 Base64URL 无填充，变长 |
 
@@ -295,7 +301,7 @@ StrategyFactory
 AlgorithmSuite（record，不可变）
 ├── securityReq          // 原始串
 ├── keyAlgorithm         // RSA | SM2
-├── keyLength            // 3072 | 4096 | 0
+├── keyLength            // 2048 | 3072 | 4096 | 0（SM2）
 ├── digestAlgorithm      // SHA256 | SM3
 ├── signAlgorithm        // 推导后的签名算法名
 ├── messageAlgorithm     // 推导后的报文算法名
@@ -447,7 +453,7 @@ sequenceDiagram
 
 | # | 需求 |
 |---|------|
-| E1 | 新增 RSA 密钥长度（如 RSA2048）：增加解析规则 + 工厂参数化，不改动策略接口 |
+| E1 | 新增 RSA 密钥长度（如 RSA8192）：增加解析规则 + 工厂参数化，不改动策略接口 |
 | E2 | 新增摘要算法（如 SHA384）：增加 DigestStrategy 实现 + 注册行 |
 | E3 | 新增报文算法（如 AES-128-GCM）：增加 MessageEncryptStrategy 实现 + 注册行 |
 | E4 | 策略工厂可替换（如测试 Mock 工厂），通过依赖注入 |
@@ -557,6 +563,8 @@ sequenceDiagram
 | 报文加密 | AES-256-GCM/NoPadding | key 32B / IV 12B / tag 128b，密文 = ciphertext‖tag |
 | 密钥加密 | RSA-3072 OAEP（双 SHA-256 + 空 label，**显式参数化**） | — |
 | 摘要 | SHA-256 | `x-wop-content-digest: sha-256 <小写hex>` |
+
+`WOP-RSA2048-SHA256` 同上，③ 密钥 2048 位，签名恒 342 字符。
 
 `WOP-RSA4096-SHA256` 同上，③ 密钥 4096 位，签名恒 683 字符。
 

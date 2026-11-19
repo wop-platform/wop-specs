@@ -8,9 +8,12 @@
 > 生成结果确定性（两次生成 sha256 一致）。样本密钥全部 TEST-ONLY，与黄金向量同源。
 > 版本戳纪律：`_meta.specVersion` 随 spec 版本事件由**再生成**刷新（禁手改）；再生成时必须
 > 补记 `generatedAt`（RFC3339）；消费仓以 `_meta` 为样本集版本的唯一依据。
-> 现状注记（2026-09-01）：`_meta.specVersion` 现值为 v0.3 合并口径；v0.4-draft 变更（D14 出向钉死等）
+> 现状注记（2026-09-01，2026-11-19 复核）：`_meta.specVersion` 现值为 v0.3 合并口径；v0.4-draft 变更（D14 出向钉死等）
 > 不改变样本字节语义——wop-go-sdk main 上 Build/Verify 消费测试双绿（2026-09-01 M2 取证）。
 > `_meta` 刷新随六仓协同再生成执行（单仓改字节会分叉冻结合同），interop 样本集此刻无需再生成。
+> **已知缺口（2026-11-19 登记）**：`crypto-vectors.json` 已含 `rsa2048` 签名与 OAEP 原语向量，但本目录
+> build/verify 样本仍只覆盖 RSA3072/4096 与 SM2-SM3。RSA2048 与 RSA3072 的 canonical/签名编排完全同构
+> （仅密钥长度与签名字节数不同），暂以原语向量 + 各仓 RSA2048 单测兜底，待下次样本集升级时补入。
 > 现存 `_meta` 无 `generatedAt` 字段（v1 冻结早于上述纪律的 2026-09-01 增补）；消费仓当前以
 > `_meta.generatedBy`（wop-go-sdk@0.1.0）与冻结合同版本为依据，该字段随下次再生成补齐。
 

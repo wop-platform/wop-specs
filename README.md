@@ -8,7 +8,7 @@
 | 文档 | 版本 | 状态 | 说明 |
 |------|------|------|------|
 | [crypto/crypto-strategy-spec.md](crypto/crypto-strategy-spec.md) | v0.4-draft | 已评审冻结（D1–D15，2026-09-01） | 加密协议契约：`securityReq` 算法套件、四维算法策略、线上字节格式、密钥分发编码、协议不变式 I1–I7、错误分类 |
-| [docs/specs/wop-sdk-spec.md](docs/specs/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F11、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、附录 G canonicalRequest 拼装规则（G1–G3）、附录 H 适配器勘误与共存增补（U1–U3）、附录 I 可选透传头 x-wop-request-id（I1–I4）、附录 J 子商户身份头 x-wop-sub-mch-id（J1–J4，ISV D-13）、验收标准 A1–A9 |
+| [docs/specs/wop-sdk-spec.md](docs/specs/wop-sdk-spec.md) | v1.0-ratified | 已批准 | 各语言官方 SDK 统一规格：功能面 F1–F11、概念 API、§2.1 出向必传 header 契约、§2.2 WopError 七值闭集、每语言密码依赖白名单、附录 D 跨语言勘误纪律（D1–D7）、附录 E 质量任务契约（E1–E3）、附录 G canonicalRequest 拼装规则（G1–G3）、附录 H 适配器勘误与共存增补（U1–U3）、附录 I 可选透传头 x-wop-request-id（I1–I4）、附录 J 子商户身份头 x-wop-sub-mch-id（J1–J4，ISV D-13）、附录 K 2026-11-19 勘误（RSA2048 / verifyResponse 路径 / 附录 J 口径）、验收标准 A1–A9 |
 | [docs/specs/wop-sdk-config-spec.md](docs/specs/wop-sdk-config-spec.md) | v0.3-draft | 已评审（K1–K26，2026-09-15） | 各语言 SDK 配置与客户端规范（目标态）：方向性凭证视图（config-spec K25，crypto-spec D14/D15）、resetDefault 并发重置（config-spec K26）、HTTPS 与 query·fragment 校验（K20）、六语言重复键路径（K21）、重定向矩阵（§7.4.1）、附录 A–F 语言细则 |
 | [crypto/crypto-vectors.json](crypto/crypto-vectors.json) | 2026-08-28 | 稳定 | 黄金测试向量（TEST-ONLY 密钥）：跨语言**字节级**断言基准，防实现漂移的验收载体（D9） |
 | [interop/v1/](interop/v1/) | wop-interop-1 | 冻结 | 协议编排互操作样本集（30 条：6 build + 7 positive + 17 negative）：canonicalRequest、signedHeaders、L2 信封与 canonical 错误分类的跨仓一致性合同 |
@@ -23,18 +23,18 @@
 
 | 语言 | 仓库 | 套件支持 | 覆盖率（行/分支） |
 |------|------|----------|-------------------|
-| Java | [wop-java-sdk](https://github.com/wop-platform/wop-java-sdk) | RSA3072/4096 + SM2-SM3 | 100% / 98.4% |
-| Go | [wop-go-sdk](https://github.com/wop-platform/wop-go-sdk) | RSA3072/4096 + SM2-SM3 | 98.6%（语句）+ 显式分支矩阵 |
-| TypeScript | [wop-typescript-sdk](https://github.com/wop-platform/wop-typescript-sdk) | RSA3072/4096（SM2-SM3 列路线图） | 100% / 100% |
-| Python | [wop-python-sdk](https://github.com/wop-platform/wop-python-sdk) | RSA3072/4096 + SM2-SM3 | 100% / 100% |
-| PHP | [wop-php-sdk](https://github.com/wop-platform/wop-php-sdk) | RSA3072/4096（SM2-SM3 列路线图） | 门禁达标（PHPUnit） |
-| .NET | [wop-dotnet-sdk](https://github.com/wop-platform/wop-dotnet-sdk) | RSA3072/4096 + SM2-SM3 | 99.4% / 99.1% |
+| Java | [wop-java-sdk](https://github.com/wop-platform/wop-java-sdk) | RSA2048/3072/4096 + SM2-SM3 | 100% / 98.4% |
+| Go | [wop-go-sdk](https://github.com/wop-platform/wop-go-sdk) | RSA2048/3072/4096 + SM2-SM3 | 98.6%（语句）+ 显式分支矩阵 |
+| TypeScript | [wop-typescript-sdk](https://github.com/wop-platform/wop-typescript-sdk) | RSA2048/3072/4096（SM2-SM3 列路线图） | 100% / 100% |
+| Python | [wop-python-sdk](https://github.com/wop-platform/wop-python-sdk) | RSA2048/3072/4096 + SM2-SM3 | 100% / 100% |
+| PHP | [wop-php-sdk](https://github.com/wop-platform/wop-php-sdk) | RSA2048/3072/4096（SM2-SM3 列路线图） | 门禁达标（PHPUnit） |
+| .NET | [wop-dotnet-sdk](https://github.com/wop-platform/wop-dotnet-sdk) | RSA2048/3072/4096 + SM2-SM3 | 99.4% / 99.1% |
 
 > TypeScript / PHP 首版仅 RSA 套件为国密生态库成熟度所限（spec 裁决 Q7）：SM2/SM3/SM4-GCM 在两语言生态无主流库支持，官方 SDK 将以纯实现补齐（D11：官方 SDK 即 SM 生态答案），以黄金向量为唯一正确性锚。
 
 ## 🔐 协议一页速览
 
-- **套件声明**：`x-wop-sign` 中的 `securityReq` 三段式 `WOP-<密钥族>-<摘要族>`，合法组合仅 `WOP-RSA3072-SHA256`、`WOP-RSA4096-SHA256`、`WOP-SM2-SM3`，跨族拒绝
+- **套件声明**：`x-wop-sign` 中的 `securityReq` 三段式 `WOP-<密钥族>-<摘要族>`，合法组合为 `WOP-RSA2048-SHA256`、`WOP-RSA3072-SHA256`、`WOP-RSA4096-SHA256`、`WOP-SM2-SM3`，跨族拒绝（平台当前对外开放的套件以开发者中心密钥类型为准）
 - **四维算法**：签名 / 报文加密（L2 数字信封 bulk）/ DEK 包装 / 内容摘要，由套件一次性原子推导
 - **线上编码**：Base64URL 无填充（拒收 `=`）；hex 一律小写；SM2 签名裸 r‖s 64B、密文 C1C3C2，线上禁 ASN.1/DER
 - **安全时序**：先验签后解密；DEK alg 族比对先于 bulk 解密；digest 必入签名头（I1）
